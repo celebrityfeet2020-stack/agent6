@@ -30,7 +30,7 @@ import os
 
 app = FastAPI(
     title="M3 Agent System",
-    version="2.9.1",
+    version="3.0.0",
     description="完整的 AI Agent 系统，支持工具调用、RPA自动化和多轮对话"
 )
 

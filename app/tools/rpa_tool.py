@@ -7,6 +7,8 @@ import subprocess
 import platform
 import json
 from typing import Dict, Any, Optional
+from langchain_core.tools import BaseTool
+from pydantic import Field
 
 # Lazy import pyautogui to avoid DISPLAY issues in Docker
 # Will be imported only when actually needed
@@ -26,99 +28,71 @@ def _check_pyautogui():
     return PYAUTOGUI_AVAILABLE
 
 
-class RPATool:
+class RPATool(BaseTool):
     """
     Cross-platform RPA tool for controlling physical devices
     """
     
-    def __init__(self):
-        self.platform = platform.system()  # 'Windows', 'Darwin' (macOS), 'Linux'
-        
-    def get_tool_info(self) -> Dict[str, Any]:
-        """Get tool information"""
-        return {
-            "name": "rpa_tool",
-            "description": "Control physical device (mouse, keyboard, applications). Supports Windows, macOS, Linux.",
-            "parameters": {
-                "action": {
-                    "type": "string",
-                    "description": "Action to perform: move_mouse, click, double_click, right_click, type_text, press_key, screenshot, run_app, run_script",
-                    "required": True
-                },
-                "x": {
-                    "type": "integer",
-                    "description": "X coordinate for mouse actions",
-                    "required": False
-                },
-                "y": {
-                    "type": "integer",
-                    "description": "Y coordinate for mouse actions",
-                    "required": False
-                },
-                "text": {
-                    "type": "string",
-                    "description": "Text to type or script to run",
-                    "required": False
-                },
-                "key": {
-                    "type": "string",
-                    "description": "Key to press (e.g., 'enter', 'ctrl+c')",
-                    "required": False
-                },
-                "app_path": {
-                    "type": "string",
-                    "description": "Path to application to run",
-                    "required": False
-                }
-            }
-        }
+    name: str = "rpa_tool"
+    description: str = """Control physical device (mouse, keyboard, applications). 
+    Input should be a JSON string with 'action' and optional parameters.
+    Actions: move_mouse, click, double_click, right_click, type_text, press_key, screenshot, run_app, run_script
+    Example: {"action": "click", "x": 100, "y": 200}"""
     
-    def execute(self, action: str, **kwargs) -> Dict[str, Any]:
+    platform_name: str = Field(default_factory=lambda: platform.system())
+    
+    def _run(self, query: str) -> str:
         """
         Execute RPA action
         
         Args:
-            action: Action to perform
-            **kwargs: Additional parameters
+            query: JSON string with action and parameters
             
         Returns:
-            Result dictionary
+            Result string
         """
-        if not _check_pyautogui():
-            return {
-                "success": False,
-                "error": "PyAutoGUI not available. This may be because DISPLAY is not set (Docker environment) or pyautogui is not installed."
-            }
-        
         try:
-            if action == "move_mouse":
-                return self._move_mouse(kwargs.get("x"), kwargs.get("y"))
-            elif action == "click":
-                return self._click(kwargs.get("x"), kwargs.get("y"))
-            elif action == "double_click":
-                return self._double_click(kwargs.get("x"), kwargs.get("y"))
-            elif action == "right_click":
-                return self._right_click(kwargs.get("x"), kwargs.get("y"))
-            elif action == "type_text":
-                return self._type_text(kwargs.get("text"))
-            elif action == "press_key":
-                return self._press_key(kwargs.get("key"))
-            elif action == "screenshot":
-                return self._screenshot()
-            elif action == "run_app":
-                return self._run_app(kwargs.get("app_path"))
-            elif action == "run_script":
-                return self._run_script(kwargs.get("text"))
-            else:
-                return {
+            # Parse input
+            params = json.loads(query) if isinstance(query, str) else query
+            action = params.get("action")
+            
+            if not action:
+                return json.dumps({"success": False, "error": "Missing 'action' parameter"})
+            
+            if not _check_pyautogui():
+                return json.dumps({
                     "success": False,
-                    "error": f"Unknown action: {action}"
-                }
+                    "error": "PyAutoGUI not available. This may be because DISPLAY is not set (Docker environment) or pyautogui is not installed."
+                })
+            
+            # Execute action
+            if action == "move_mouse":
+                result = self._move_mouse(params.get("x"), params.get("y"))
+            elif action == "click":
+                result = self._click(params.get("x"), params.get("y"))
+            elif action == "double_click":
+                result = self._double_click(params.get("x"), params.get("y"))
+            elif action == "right_click":
+                result = self._right_click(params.get("x"), params.get("y"))
+            elif action == "type_text":
+                result = self._type_text(params.get("text"))
+            elif action == "press_key":
+                result = self._press_key(params.get("key"))
+            elif action == "screenshot":
+                result = self._screenshot()
+            elif action == "run_app":
+                result = self._run_app(params.get("app_path"))
+            elif action == "run_script":
+                result = self._run_script(params.get("text"))
+            else:
+                result = {"success": False, "error": f"Unknown action: {action}"}
+            
+            return json.dumps(result)
+            
+        except json.JSONDecodeError as e:
+            return json.dumps({"success": False, "error": f"Invalid JSON input: {str(e)}"})
         except Exception as e:
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return json.dumps({"success": False, "error": str(e)})
     
     def _move_mouse(self, x: Optional[int], y: Optional[int]) -> Dict[str, Any]:
         """Move mouse to (x, y)"""
@@ -163,24 +137,18 @@ class RPATool:
         if not text:
             return {"success": False, "error": "text parameter is required"}
         
-        pyautogui.write(text)
+        pyautogui.typewrite(text, interval=0.05)
         return {
             "success": True,
-            "message": f"Typed: {text[:50]}..." if len(text) > 50 else f"Typed: {text}"
+            "message": f"Typed text: {text[:50]}..."
         }
     
     def _press_key(self, key: Optional[str]) -> Dict[str, Any]:
-        """Press key or key combination"""
+        """Press key"""
         if not key:
             return {"success": False, "error": "key parameter is required"}
         
-        # Handle key combinations (e.g., 'ctrl+c')
-        if '+' in key:
-            keys = key.split('+')
-            pyautogui.hotkey(*keys)
-        else:
-            pyautogui.press(key)
-        
+        pyautogui.press(key)
         return {
             "success": True,
             "message": f"Pressed key: {key}"
@@ -188,14 +156,18 @@ class RPATool:
     
     def _screenshot(self) -> Dict[str, Any]:
         """Take screenshot"""
-        screenshot_path = "/tmp/rpa_screenshot.png"
+        import tempfile
+        import os
+        
+        # Save to temp file
+        temp_file = os.path.join(tempfile.gettempdir(), "rpa_screenshot.png")
         screenshot = pyautogui.screenshot()
-        screenshot.save(screenshot_path)
+        screenshot.save(temp_file)
         
         return {
             "success": True,
-            "message": f"Screenshot saved to {screenshot_path}",
-            "screenshot_path": screenshot_path
+            "message": f"Screenshot saved to {temp_file}",
+            "file_path": temp_file
         }
     
     def _run_app(self, app_path: Optional[str]) -> Dict[str, Any]:
@@ -204,12 +176,10 @@ class RPATool:
             return {"success": False, "error": "app_path parameter is required"}
         
         try:
-            if self.platform == "Darwin":  # macOS
-                subprocess.Popen(["open", app_path])
-            elif self.platform == "Windows":
-                subprocess.Popen([app_path])
-            else:  # Linux
-                subprocess.Popen([app_path])
+            if self.platform_name == "Windows":
+                subprocess.Popen(app_path, shell=True)
+            else:  # macOS, Linux
+                subprocess.Popen(["open" if self.platform_name == "Darwin" else "xdg-open", app_path])
             
             return {
                 "success": True,
@@ -222,75 +192,42 @@ class RPATool:
             }
     
     def _run_script(self, script: Optional[str]) -> Dict[str, Any]:
-        """Run platform-specific script"""
+        """Run script via SSH"""
         if not script:
             return {"success": False, "error": "script parameter is required"}
         
         try:
-            if self.platform == "Darwin":  # macOS - AppleScript
-                result = subprocess.run(
-                    ["osascript", "-e", script],
-                    capture_output=True,
-                    text=True,
-                    timeout=30
-                )
+            # Get RPA_HOST_STRING from environment
+            import os
+            host_string = os.getenv("RPA_HOST_STRING")
+            
+            if not host_string:
                 return {
-                    "success": result.returncode == 0,
-                    "output": result.stdout,
-                    "error": result.stderr if result.returncode != 0 else None
+                    "success": False,
+                    "error": "RPA_HOST_STRING environment variable not set"
                 }
-            elif self.platform == "Windows":  # PowerShell
-                result = subprocess.run(
-                    ["powershell", "-Command", script],
-                    capture_output=True,
-                    text=True,
-                    timeout=30
-                )
-                return {
-                    "success": result.returncode == 0,
-                    "output": result.stdout,
-                    "error": result.stderr if result.returncode != 0 else None
-                }
-            else:  # Linux - Bash
-                result = subprocess.run(
-                    ["bash", "-c", script],
-                    capture_output=True,
-                    text=True,
-                    timeout=30
-                )
-                return {
-                    "success": result.returncode == 0,
-                    "output": result.stdout,
-                    "error": result.stderr if result.returncode != 0 else None
-                }
+            
+            # Execute via SSH
+            result = subprocess.run(
+                ["ssh", host_string, script],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            return {
+                "success": result.returncode == 0,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "return_code": result.returncode
+            }
         except subprocess.TimeoutExpired:
             return {
                 "success": False,
-                "error": "Script execution timed out (30s limit)"
+                "error": "Script execution timed out (30s)"
             }
         except Exception as e:
             return {
                 "success": False,
-                "error": f"Failed to run script: {str(e)}"
+                "error": f"Failed to execute script: {str(e)}"
             }
-
-
-# Tool instance
-rpa_tool = RPATool()
-
-
-def get_tool_info():
-    """Get tool information for LangGraph"""
-    return rpa_tool.get_tool_info()
-
-
-def execute(**kwargs):
-    """Execute RPA action"""
-    action = kwargs.get("action")
-    if not action:
-        return {
-            "success": False,
-            "error": "action parameter is required"
-        }
-    
-    return rpa_tool.execute(action, **kwargs)

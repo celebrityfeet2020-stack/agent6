@@ -5,86 +5,70 @@ Synchronize files between container and host machine
 
 import os
 import shutil
+import json
 from typing import Dict, Any, Optional
 from pathlib import Path
+from langchain_core.tools import BaseTool
+from pydantic import Field
 
 
-class FileSyncTool:
+class FileSyncTool(BaseTool):
     """
     File synchronization tool for container-host communication
     """
     
-    def __init__(self):
-        # Default host mount points (configured via Docker volumes)
-        self.host_desktop = os.getenv("HOST_DESKTOP_PATH", "/host_desktop")
-        self.host_downloads = os.getenv("HOST_DOWNLOADS_PATH", "/host_downloads")
-        self.host_documents = os.getenv("HOST_DOCUMENTS_PATH", "/host_documents")
-        
-    def get_tool_info(self) -> Dict[str, Any]:
-        """Get tool information"""
-        return {
-            "name": "file_sync_tool",
-            "description": "Synchronize files between container and host machine (Desktop, Downloads, Documents)",
-            "parameters": {
-                "action": {
-                    "type": "string",
-                    "description": "Action to perform: copy_to_host, copy_from_host, list_host_files",
-                    "required": True
-                },
-                "source_path": {
-                    "type": "string",
-                    "description": "Source file path (for copy operations)",
-                    "required": False
-                },
-                "dest_path": {
-                    "type": "string",
-                    "description": "Destination file path (for copy operations)",
-                    "required": False
-                },
-                "host_location": {
-                    "type": "string",
-                    "description": "Host location: desktop, downloads, documents",
-                    "required": False
-                }
-            }
-        }
+    name: str = "file_sync_tool"
+    description: str = """Synchronize files between container and host machine (Desktop, Downloads, Documents).
+    Input should be a JSON string with 'action' and parameters.
+    Actions: copy_to_host, copy_from_host, list_host_files
+    Example: {"action": "copy_to_host", "source_path": "/tmp/file.txt", "host_location": "desktop"}"""
     
-    def execute(self, action: str, **kwargs) -> Dict[str, Any]:
+    host_desktop: str = Field(default_factory=lambda: os.getenv("HOST_DESKTOP_PATH", "/host_desktop"))
+    host_downloads: str = Field(default_factory=lambda: os.getenv("HOST_DOWNLOADS_PATH", "/host_downloads"))
+    host_documents: str = Field(default_factory=lambda: os.getenv("HOST_DOCUMENTS_PATH", "/host_documents"))
+    
+    def _run(self, query: str) -> str:
         """
         Execute file sync action
         
         Args:
-            action: Action to perform
-            **kwargs: Additional parameters
+            query: JSON string with action and parameters
             
         Returns:
-            Result dictionary
+            Result string
         """
         try:
+            # Parse input
+            params = json.loads(query) if isinstance(query, str) else query
+            action = params.get("action")
+            
+            if not action:
+                return json.dumps({"success": False, "error": "Missing 'action' parameter"})
+            
+            # Execute action
             if action == "copy_to_host":
-                return self._copy_to_host(
-                    kwargs.get("source_path"),
-                    kwargs.get("dest_path"),
-                    kwargs.get("host_location", "desktop")
+                result = self._copy_to_host(
+                    params.get("source_path"),
+                    params.get("dest_path"),
+                    params.get("host_location", "desktop")
                 )
             elif action == "copy_from_host":
-                return self._copy_from_host(
-                    kwargs.get("source_path"),
-                    kwargs.get("dest_path"),
-                    kwargs.get("host_location", "desktop")
+                result = self._copy_from_host(
+                    params.get("source_path"),
+                    params.get("dest_path"),
+                    params.get("host_location", "desktop")
                 )
             elif action == "list_host_files":
-                return self._list_host_files(kwargs.get("host_location", "desktop"))
+                result = self._list_host_files(params.get("host_location", "desktop"))
             else:
-                return {
-                    "success": False,
-                    "error": f"Unknown action: {action}"
-                }
+                result = {"success": False, "error": f"Unknown action: {action}"}
+            
+            return json.dumps(result)
+            
+        except json.JSONDecodeError as e:
+            return json.dumps({"success": False, "error": f"Invalid JSON input: {str(e)}"})
         except Exception as e:
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return json.dumps({"success": False, "error": str(e)})
     
     def _get_host_path(self, location: str) -> str:
         """Get host mount path by location"""
@@ -192,24 +176,3 @@ class FileSyncTool:
             "files": files,
             "total_count": len(files)
         }
-
-
-# Tool instance
-file_sync_tool = FileSyncTool()
-
-
-def get_tool_info():
-    """Get tool information for LangGraph"""
-    return file_sync_tool.get_tool_info()
-
-
-def execute(**kwargs):
-    """Execute file sync action"""
-    action = kwargs.get("action")
-    if not action:
-        return {
-            "success": False,
-            "error": "action parameter is required"
-        }
-    
-    return file_sync_tool.execute(action, **kwargs)
