@@ -1,0 +1,61 @@
+# M3 Agent System v2.1.0 - Complete Dependencies
+# 核心框架
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+pydantic==2.10.3
+pydantic-settings==2.6.1
+
+# LangGraph和LangChain
+langgraph==0.2.55
+langchain==0.3.13
+langchain-community==0.3.13
+langchain-core==0.3.28
+langchain-openai==0.2.14
+
+# 数据库
+redis==5.2.1
+
+# HTTP客户端
+httpx==0.28.1
+requests==2.32.3
+aiohttp==3.11.11
+
+# 网页操作
+playwright==1.49.1
+beautifulsoup4==4.12.3
+lxml==5.3.0
+
+# 图像处理
+opencv-python-headless==4.10.0.84
+Pillow==11.0.0
+easyocr==1.7.2
+pytesseract==0.3.13
+
+# 语音识别
+openai-whisper==20240930
+
+# 数据分析
+pandas==2.2.3
+matplotlib==3.9.3
+seaborn==0.13.2
+plotly==5.24.1
+
+# 代码执行
+docker==7.1.0
+
+# SSH和Git
+paramiko==3.5.0
+gitpython==3.1.43
+
+# Telegram
+telethon==1.38.1
+python-telegram-bot==21.9
+
+# 工具库
+python-dotenv==1.0.1
+pyyaml==6.0.2
+jinja2==3.1.5
+psutil==6.1.0
+
+# RPA工具
+pyautogui==0.9.54
