@@ -30,8 +30,8 @@ import os
 
 app = FastAPI(
     title="M3 Agent System",
-    version="2.3.0",
-    description="完整的 AI Agent 系统，支持工具调用和多轮对话"
+    version="2.9.0",
+    description="完整的 AI Agent 系统，支持工具调用、RPA自动化和多轮对话"
 )
 
 app.add_middleware(
@@ -63,7 +63,7 @@ llm = ChatOpenAI(
     api_key="not-needed"
 )
 
-# Initialize all 13 tools
+# Initialize all 15 tools (v2.9)
 tools = [
     WebSearchTool(),
     WebScraperTool(),
@@ -78,6 +78,8 @@ tools = [
     UniversalAPITool(),
     TelegramTool(),
     SpeechRecognitionTool(),
+    RPATool(),           # v2.8新增：跨平台RPA自动化
+    FileSyncTool(),      # v2.8新增：容器-宿主机文件同步
 ]
 
 # Bind tools to LLM

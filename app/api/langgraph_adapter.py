@@ -194,10 +194,21 @@ async def stream_run_endpoint(
             
             # 流式执行Agent
             async for chunk in app_graph.astream(input_data, config=run_config):
+                # 调试日志
+                logger.debug(f"Stream chunk: {chunk}")
+                
                 # 格式化为LangGraph标准格式
                 formatted_chunk = format_langgraph_chunk(chunk)
                 if formatted_chunk:
                     yield f"data: {formatted_chunk}\n\n"
+                else:
+                    # 即使没有格式化成功，也输出原始数据供调试
+                    import json
+                    try:
+                        raw_data = json.dumps({"type": "raw", "data": str(chunk)})
+                        yield f"data: {raw_data}\n\n"
+                    except:
+                        pass
             
             # 发送结束标记
             yield "data: [DONE]\n\n"

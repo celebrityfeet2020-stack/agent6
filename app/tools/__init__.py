@@ -12,6 +12,8 @@ from .browser_automation import BrowserAutomationTool
 from .api_caller import UniversalAPITool
 from .telegram_tool import TelegramTool
 from .speech_recognition_tool import SpeechRecognitionTool
+from .rpa_tool import RPATool
+from .file_sync_tool import FileSyncTool
 
 __all__ = [
     "WebSearchTool",
@@ -27,4 +29,6 @@ __all__ = [
     "UniversalAPITool",
     "TelegramTool",
     "SpeechRecognitionTool",
+    "RPATool",
+    "FileSyncTool",
 ]

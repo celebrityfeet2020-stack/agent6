@@ -43,7 +43,7 @@ ssh_tool.execute("kori@192.168.9.125", "python3 /path/to/rpa_tool.py --action mo
 ssh_tool.execute("admin@192.168.9.29", "powershell C:\\path\\to\\rpa_tool.ps1 -Action Click -X 100 -Y 200")
 ```
 
-### 2. **文件同步工具**
+### 2. **文件同步工具** (需要Docker卷挂载)
 
 **功能描述**：在容器和宿主机之间同步文件。
 
@@ -64,6 +64,42 @@ docker run -d \
   -v /Users/kori/Downloads:/host_downloads \
   -v /Users/kori/Documents:/host_documents \
   junpeng999/m3-agent-system:v2.8-arm64
+
+### 3. **SSH自连接** (可选，用于RPA)
+
+**功能描述**：让M3 Agent能够通过SSH连接到自己的宿主机（例如Mac Studio），从而控制物理桌面。
+
+**配置步骤**：
+
+1. **在宿主机上开启SSH服务**：
+   - **macOS**: 系统设置 -> 共享 -> 远程登录 -> 开启
+   - **Linux**: `sudo systemctl start ssh`
+   - **Windows**: 设置 -> 应用 -> 可选功能 -> 添加功能 -> OpenSSH服务器
+
+2. **在M3容器中配置SSH密钥** (推荐，免密登录)：
+   ```bash
+   # 在容器内生成SSH密钥
+   docker exec m3-agent ssh-keygen -t rsa -b 4096 -N '' -f ~/.ssh/id_rsa
+
+   # 将公钥添加到宿主机
+   docker exec m3-agent ssh-copy-id -i ~/.ssh/id_rsa.pub kori@192.168.9.125
+   ```
+
+3. **或者在M3容器中配置SSH密码** (不推荐)：
+   ```bash
+   docker run -d \
+     -e HOST_SSH_PASSWORD="your_host_ssh_password" \
+     junpeng999/m3-agent-system:v2.8-arm64
+   ```
+
+**使用示例**：
+```python
+# Agent通过SSH连接到自己的宿主机
+ssh_tool.execute(
+    host="kori@192.168.9.125",
+    command="osascript -e 'tell application "Safari" to activate'"
+)
+```
 ```
 
 ---
@@ -118,6 +154,42 @@ docker run -d \
 1. **拉取v2.8镜像**：
    ```bash
    docker pull junpeng999/m3-agent-system:v2.8-arm64
+
+### 3. **SSH自连接** (可选，用于RPA)
+
+**功能描述**：让M3 Agent能够通过SSH连接到自己的宿主机（例如Mac Studio），从而控制物理桌面。
+
+**配置步骤**：
+
+1. **在宿主机上开启SSH服务**：
+   - **macOS**: 系统设置 -> 共享 -> 远程登录 -> 开启
+   - **Linux**: `sudo systemctl start ssh`
+   - **Windows**: 设置 -> 应用 -> 可选功能 -> 添加功能 -> OpenSSH服务器
+
+2. **在M3容器中配置SSH密钥** (推荐，免密登录)：
+   ```bash
+   # 在容器内生成SSH密钥
+   docker exec m3-agent ssh-keygen -t rsa -b 4096 -N '' -f ~/.ssh/id_rsa
+
+   # 将公钥添加到宿主机
+   docker exec m3-agent ssh-copy-id -i ~/.ssh/id_rsa.pub kori@192.168.9.125
+   ```
+
+3. **或者在M3容器中配置SSH密码** (不推荐)：
+   ```bash
+   docker run -d \
+     -e HOST_SSH_PASSWORD="your_host_ssh_password" \
+     junpeng999/m3-agent-system:v2.8-arm64
+   ```
+
+**使用示例**：
+```python
+# Agent通过SSH连接到自己的宿主机
+ssh_tool.execute(
+    host="kori@192.168.9.125",
+    command="osascript -e 'tell application "Safari" to activate'"
+)
+```
    ```
 
 2. **停止旧容器**：
@@ -126,7 +198,7 @@ docker run -d \
    docker rm m3-agent
    ```
 
-3. **启动v2.8容器**（带文件同步）：
+3. **启动v2.8容器**（完整配置）：
    ```bash
    docker run -d \
      --name m3-agent \
@@ -136,11 +208,48 @@ docker run -d \
      -v m3-agent-data:/data \
      -v /Users/kori/Desktop:/host_desktop \
      -v /Users/kori/Downloads:/host_downloads \
+     -v /Users/kori/Documents:/host_documents \
      -e OPENAI_API_KEY="your_key" \
      -e TAVILY_API_KEY="your_key" \
      -e D5_API_URL="http://10.7.7.6:8000" \
      -e AGENT_ID="m3-mac-studio-001" \
      junpeng999/m3-agent-system:v2.8-arm64
+
+### 3. **SSH自连接** (可选，用于RPA)
+
+**功能描述**：让M3 Agent能够通过SSH连接到自己的宿主机（例如Mac Studio），从而控制物理桌面。
+
+**配置步骤**：
+
+1. **在宿主机上开启SSH服务**：
+   - **macOS**: 系统设置 -> 共享 -> 远程登录 -> 开启
+   - **Linux**: `sudo systemctl start ssh`
+   - **Windows**: 设置 -> 应用 -> 可选功能 -> 添加功能 -> OpenSSH服务器
+
+2. **在M3容器中配置SSH密钥** (推荐，免密登录)：
+   ```bash
+   # 在容器内生成SSH密钥
+   docker exec m3-agent ssh-keygen -t rsa -b 4096 -N '' -f ~/.ssh/id_rsa
+
+   # 将公钥添加到宿主机
+   docker exec m3-agent ssh-copy-id -i ~/.ssh/id_rsa.pub kori@192.168.9.125
+   ```
+
+3. **或者在M3容器中配置SSH密码** (不推荐)：
+   ```bash
+   docker run -d \
+     -e HOST_SSH_PASSWORD="your_host_ssh_password" \
+     junpeng999/m3-agent-system:v2.8-arm64
+   ```
+
+**使用示例**：
+```python
+# Agent通过SSH连接到自己的宿主机
+ssh_tool.execute(
+    host="kori@192.168.9.125",
+    command="osascript -e 'tell application "Safari" to activate'"
+)
+```
    ```
 
 4. **验证部署**：
@@ -173,7 +282,8 @@ docker run -d \
 ## 📝 已知问题
 
 1. **RPA工具在容器内无法直接使用**：需要通过SSH连接到物理设备
-2. **文件同步需要Docker卷挂载**：需要在启动时配置
+2. **文件同步需要Docker卷挂载**：需要在`docker run`命令中通过`-v`参数配置，否则文件同步工具无法工作。
+3. **RPA工具需要SSH连接**：RPA工具必须通过SSH连接到物理设备才能使用，无法直接在容器内控制宿主机桌面。
 
 ---
 

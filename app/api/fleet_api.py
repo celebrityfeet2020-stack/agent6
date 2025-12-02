@@ -397,12 +397,22 @@ async def fleet_health():
     return {
         "status": "healthy",
         "module": "fleet_integration",
-        "version": "2.7.0",
+        "version": "2.9.0",
         "features": {
             "temporal_integration": "mock",
             "memory_integration": "active",
             "memory_sync": "active",
-            "langgraph_api": "active"
+            "langgraph_api": "active",
+            "rpa_tool": "active",
+            "file_sync_tool": "active"
         },
         "message": "Fleet API endpoints are ready"
     }
+
+
+@router.get("/memory/status")
+async def get_memory_status_alias():
+    """
+    记忆同步状态检查（别名端点，指向/memory/sync/status）
+    """
+    return await get_memory_sync_status()
