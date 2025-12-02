@@ -8,11 +8,22 @@ import platform
 import json
 from typing import Dict, Any, Optional
 
-try:
-    import pyautogui
-    PYAUTOGUI_AVAILABLE = True
-except ImportError:
-    PYAUTOGUI_AVAILABLE = False
+# Lazy import pyautogui to avoid DISPLAY issues in Docker
+# Will be imported only when actually needed
+PYAUTOGUI_AVAILABLE = None  # Will be checked on first use
+
+
+def _check_pyautogui():
+    """Lazy import and check pyautogui availability"""
+    global PYAUTOGUI_AVAILABLE
+    if PYAUTOGUI_AVAILABLE is None:
+        try:
+            import pyautogui as _pg
+            globals()['pyautogui'] = _pg
+            PYAUTOGUI_AVAILABLE = True
+        except (ImportError, KeyError) as e:
+            PYAUTOGUI_AVAILABLE = False
+    return PYAUTOGUI_AVAILABLE
 
 
 class RPATool:
@@ -73,10 +84,10 @@ class RPATool:
         Returns:
             Result dictionary
         """
-        if not PYAUTOGUI_AVAILABLE:
+        if not _check_pyautogui():
             return {
                 "success": False,
-                "error": "PyAutoGUI not installed. Please install it with: pip install pyautogui"
+                "error": "PyAutoGUI not available. This may be because DISPLAY is not set (Docker environment) or pyautogui is not installed."
             }
         
         try:
