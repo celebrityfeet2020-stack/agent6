@@ -121,18 +121,71 @@
   * {
     @apply border-border outline-ring/50;
   }
+  
+  /* v1.9: Font optimization based on Manus design */
+  html {
+    font-size: 16px; /* Increased from default 14px */
+  }
+  
   body {
     @apply bg-background text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.7; /* Increased from default 1.5 */
+  }
+  
+  /* Headings - larger and bolder */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  
+  h1 { font-size: 22px; }
+  h2 { font-size: 20px; }
+  h3 { font-size: 18px; }
+  h4 { font-size: 16px; }
+  
+  /* Paragraphs - better spacing */
+  p {
+    margin-bottom: 12px;
+  }
+  
+  /* Lists - better spacing */
+  ul, ol {
+    margin-bottom: 16px;
+    padding-left: 24px;
+  }
+  
+  li {
+    margin-bottom: 8px;
+    line-height: 1.6;
+  }
+  
+  /* Code blocks - monospace font */
+  code, pre {
+    font-family: "SF Mono", "Monaco", "Cascadia Code", "Consolas", "Courier New", monospace;
+    font-size: 14px;
+  }
+  
+  /* Strong text */
+  strong, b {
+    font-weight: 600;
+  }
+  
+  /* Small text */
+  small {
+    font-size: 13px;
   }
 }
 
 @layer components {
+  /* v1.9: Increased padding for better readability */
   .container {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 1rem;
-    padding-right: 1rem;
+    padding-left: 1.5rem; /* Increased from 1rem */
+    padding-right: 1.5rem;
   }
 
   .flex {
@@ -142,15 +195,15 @@
 
   @media (min-width: 640px) {
     .container {
-      padding-left: 1.5rem;
-      padding-right: 1.5rem;
+      padding-left: 2rem; /* Increased from 1.5rem */
+      padding-right: 2rem;
     }
   }
 
   @media (min-width: 1024px) {
     .container {
-      padding-left: 2rem;
-      padding-right: 2rem;
+      padding-left: 2.5rem; /* Increased from 2rem */
+      padding-right: 2.5rem;
       max-width: 1280px;
     }
   }
