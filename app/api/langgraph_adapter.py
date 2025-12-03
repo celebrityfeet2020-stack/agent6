@@ -33,9 +33,25 @@ class ThreadResponse(BaseModel):
 
 class RunRequest(BaseModel):
     """运行请求"""
-    input: str = Field(..., description="User input message")
+    input: Any = Field(..., description="User input message (string or dict with messages)")
     stream: bool = Field(default=True, description="Whether to stream the response")
     config: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    
+    def get_user_message(self) -> str:
+        """提取用户消息（兼容旧格式）"""
+        if isinstance(self.input, str):
+            # 新格式：直接是字符串
+            return self.input
+        elif isinstance(self.input, dict):
+            # 旧格式：{"messages": [{"role": "user", "content": "..."}]}
+            if "messages" in self.input and isinstance(self.input["messages"], list):
+                for msg in self.input["messages"]:
+                    if isinstance(msg, dict) and msg.get("role") == "user":
+                        return msg.get("content", "")
+            # 其他dict格式
+            return str(self.input)
+        else:
+            return str(self.input)
 
 
 class RunResponse(BaseModel):
@@ -171,7 +187,9 @@ async def stream_run_endpoint(
     if not thread:
         raise HTTPException(status_code=404, detail=f"Thread {thread_id} not found")
     
-    logger.info(f"Starting stream run for thread {thread_id}, input: {request.input[:50]}...")
+    # 提取用户消息（兼容旧格式）
+    user_message = request.get_user_message()
+    logger.info(f"Starting stream run for thread {thread_id}, input: {user_message[:50]}...")
     
     # 创建流式响应
     async def generate_stream() -> AsyncGenerator[str, None]:
@@ -183,7 +201,7 @@ async def stream_run_endpoint(
             
             # 准备输入
             input_data = {
-                "messages": [{"role": "user", "content": request.input}]
+                "messages": [{"role": "user", "content": user_message}]
             }
             
             # 配置
