@@ -207,12 +207,36 @@ async def run_benchmark():
 
 @admin_app.get("/api/status")
 async def get_status():
-    """获取系统状态"""
+    """获取系统状态（v3.6增强版）"""
     llm_base_url = os.getenv("LLM_BASE_URL", "http://192.168.9.125:8000/v1")
     llm_model = os.getenv("LLM_MODEL", "minimax/minimax-m2")
     
     # 检测 LLM 后端
     backend_type, models = await detect_llm_backend()
+    
+    # 动态获取工具数量
+    tools_count = 15  # v3.6: 默认15个工具
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get("http://localhost:8000/health")
+            if response.status_code == 200:
+                data = response.json()
+                tools_count = data.get("tools_count", 15)
+    except:
+        pass
+    
+    # 获取系统性能数据
+    import psutil
+    try:
+        cpu_percent = psutil.cpu_percent(interval=0.1)
+        memory = psutil.virtual_memory()
+        memory_percent = memory.percent
+        disk = psutil.disk_usage('/')
+        disk_percent = disk.percent
+    except:
+        cpu_percent = 0
+        memory_percent = 0
+        disk_percent = 0
     
     return {
         "timestamp": datetime.now().isoformat(),
@@ -226,8 +250,13 @@ async def get_status():
         "agent_api": {
             "status": "running",
             "configured_model": llm_model,
-            "tools_count": 13,
-            "api_port": 8001
+            "tools_count": tools_count,
+            "api_port": 8000
+        },
+        "system_performance": {
+            "cpu_usage": round(cpu_percent, 1),
+            "memory_usage": round(memory_percent, 1),
+            "disk_usage": round(disk_percent, 1)
         }
     }
 
