@@ -45,8 +45,9 @@ class RPATool(BaseTool):
             if not action:
                 return json.dumps({"success": False, "error": "Missing 'action' parameter"})
             
-            # Get RPA_HOST_STRING from environment
+            # Get RPA_HOST_STRING and RPA_HOST_PASSWORD from environment
             host_string = os.getenv("RPA_HOST_STRING")
+            host_password = os.getenv("RPA_HOST_PASSWORD")
             
             if not host_string:
                 return json.dumps({
@@ -56,23 +57,23 @@ class RPATool(BaseTool):
             
             # Execute action
             if action == "move_mouse":
-                result = self._move_mouse_remote(host_string, params.get("x"), params.get("y"))
+                result = self._move_mouse_remote(host_string, params.get("x"), params.get("y"), host_password)
             elif action == "click":
-                result = self._click_remote(host_string, params.get("x"), params.get("y"))
+                result = self._click_remote(host_string, params.get("x"), params.get("y"), host_password)
             elif action == "double_click":
-                result = self._double_click_remote(host_string, params.get("x"), params.get("y"))
+                result = self._double_click_remote(host_string, params.get("x"), params.get("y"), host_password)
             elif action == "right_click":
-                result = self._right_click_remote(host_string, params.get("x"), params.get("y"))
+                result = self._right_click_remote(host_string, params.get("x"), params.get("y"), host_password)
             elif action == "type_text":
-                result = self._type_text_remote(host_string, params.get("text"))
+                result = self._type_text_remote(host_string, params.get("text"), host_password)
             elif action == "press_key":
-                result = self._press_key_remote(host_string, params.get("key"))
+                result = self._press_key_remote(host_string, params.get("key"), host_password)
             elif action == "screenshot":
-                result = self._screenshot_remote(host_string)
+                result = self._screenshot_remote(host_string, host_password)
             elif action == "run_app":
-                result = self._run_app_remote(host_string, params.get("app_path"))
+                result = self._run_app_remote(host_string, params.get("app_path"), host_password)
             elif action == "run_script":
-                result = self._run_script_remote(host_string, params.get("script"))
+                result = self._run_script_remote(host_string, params.get("script"), host_password)
             else:
                 result = {"success": False, "error": f"Unknown action: {action}"}
             
@@ -83,15 +84,22 @@ class RPATool(BaseTool):
         except Exception as e:
             return json.dumps({"success": False, "error": str(e)})
     
-    def _execute_remote_python(self, host_string: str, python_code: str, timeout: int = 30) -> Dict[str, Any]:
+    def _execute_remote_python(self, host_string: str, python_code: str, timeout: int = 30, password: Optional[str] = None) -> Dict[str, Any]:
         """Execute Python code on remote host via SSH"""
         try:
             # Escape quotes in Python code
             escaped_code = python_code.replace('"', '\\"').replace("'", "\\'")
             
+            # Build SSH command
+            ssh_cmd = ["ssh", "-o", "StrictHostKeyChecking=no", host_string, f'python3 -c "{escaped_code}"']
+            
+            # Use sshpass if password is provided
+            if password:
+                ssh_cmd = ["sshpass", "-p", password] + ssh_cmd
+            
             # Execute via SSH
             result = subprocess.run(
-                ["ssh", "-o", "StrictHostKeyChecking=no", host_string, f'python3 -c "{escaped_code}"'],
+                ssh_cmd,
                 capture_output=True,
                 text=True,
                 timeout=timeout
@@ -119,13 +127,13 @@ class RPATool(BaseTool):
                 "error": f"SSH connection failed: {str(e)}"
             }
     
-    def _move_mouse_remote(self, host_string: str, x: Optional[int], y: Optional[int]) -> Dict[str, Any]:
+    def _move_mouse_remote(self, host_string: str, x: Optional[int], y: Optional[int], password: Optional[str] = None) -> Dict[str, Any]:
         """Move mouse to (x, y) on remote host"""
         if x is None or y is None:
             return {"success": False, "error": "x and y coordinates are required"}
         
         python_code = f"import pyautogui; pyautogui.moveTo({x}, {y}); print('Mouse moved to ({x}, {y})')"
-        result = self._execute_remote_python(host_string, python_code)
+        result = self._execute_remote_python(host_string, python_code, password=password)
         
         if result["success"]:
             return {
@@ -134,7 +142,7 @@ class RPATool(BaseTool):
             }
         return result
     
-    def _click_remote(self, host_string: str, x: Optional[int], y: Optional[int]) -> Dict[str, Any]:
+    def _click_remote(self, host_string: str, x: Optional[int], y: Optional[int], password: Optional[str] = None) -> Dict[str, Any]:
         """Click at (x, y) on remote host"""
         if x is not None and y is not None:
             python_code = f"import pyautogui; pyautogui.click({x}, {y}); print('Clicked at ({x}, {y})')"
@@ -143,7 +151,7 @@ class RPATool(BaseTool):
             python_code = "import pyautogui; pyautogui.click(); print('Clicked at current position')"
             message = "Clicked at current position"
         
-        result = self._execute_remote_python(host_string, python_code)
+        result = self._execute_remote_python(host_string, python_code, password=password)
         
         if result["success"]:
             return {
@@ -152,7 +160,7 @@ class RPATool(BaseTool):
             }
         return result
     
-    def _double_click_remote(self, host_string: str, x: Optional[int], y: Optional[int]) -> Dict[str, Any]:
+    def _double_click_remote(self, host_string: str, x: Optional[int], y: Optional[int], password: Optional[str] = None) -> Dict[str, Any]:
         """Double click at (x, y) on remote host"""
         if x is not None and y is not None:
             python_code = f"import pyautogui; pyautogui.doubleClick({x}, {y}); print('Double clicked at ({x}, {y})')"
@@ -161,7 +169,7 @@ class RPATool(BaseTool):
             python_code = "import pyautogui; pyautogui.doubleClick(); print('Double clicked at current position')"
             message = "Double clicked at current position"
         
-        result = self._execute_remote_python(host_string, python_code)
+        result = self._execute_remote_python(host_string, python_code, password=password)
         
         if result["success"]:
             return {
@@ -170,7 +178,7 @@ class RPATool(BaseTool):
             }
         return result
     
-    def _right_click_remote(self, host_string: str, x: Optional[int], y: Optional[int]) -> Dict[str, Any]:
+    def _right_click_remote(self, host_string: str, x: Optional[int], y: Optional[int], password: Optional[str] = None) -> Dict[str, Any]:
         """Right click at (x, y) on remote host"""
         if x is not None and y is not None:
             python_code = f"import pyautogui; pyautogui.rightClick({x}, {y}); print('Right clicked at ({x}, {y})')"
@@ -179,7 +187,7 @@ class RPATool(BaseTool):
             python_code = "import pyautogui; pyautogui.rightClick(); print('Right clicked at current position')"
             message = "Right clicked at current position"
         
-        result = self._execute_remote_python(host_string, python_code)
+        result = self._execute_remote_python(host_string, python_code, password=password)
         
         if result["success"]:
             return {
@@ -188,7 +196,7 @@ class RPATool(BaseTool):
             }
         return result
     
-    def _type_text_remote(self, host_string: str, text: Optional[str]) -> Dict[str, Any]:
+    def _type_text_remote(self, host_string: str, text: Optional[str], password: Optional[str] = None) -> Dict[str, Any]:
         """Type text on remote host"""
         if not text:
             return {"success": False, "error": "text parameter is required"}
@@ -196,7 +204,7 @@ class RPATool(BaseTool):
         # Escape special characters
         escaped_text = text.replace("\\", "\\\\").replace("'", "\\'")
         python_code = f"import pyautogui; pyautogui.typewrite('{escaped_text}', interval=0.05); print('Typed text')"
-        result = self._execute_remote_python(host_string, python_code)
+        result = self._execute_remote_python(host_string, python_code, password=password)
         
         if result["success"]:
             return {
@@ -205,13 +213,13 @@ class RPATool(BaseTool):
             }
         return result
     
-    def _press_key_remote(self, host_string: str, key: Optional[str]) -> Dict[str, Any]:
+    def _press_key_remote(self, host_string: str, key: Optional[str], password: Optional[str] = None) -> Dict[str, Any]:
         """Press key on remote host"""
         if not key:
             return {"success": False, "error": "key parameter is required"}
         
         python_code = f"import pyautogui; pyautogui.press('{key}'); print('Pressed key: {key}')"
-        result = self._execute_remote_python(host_string, python_code)
+        result = self._execute_remote_python(host_string, python_code, password=password)
         
         if result["success"]:
             return {
@@ -220,7 +228,7 @@ class RPATool(BaseTool):
             }
         return result
     
-    def _screenshot_remote(self, host_string: str) -> Dict[str, Any]:
+    def _screenshot_remote(self, host_string: str, password: Optional[str] = None) -> Dict[str, Any]:
         """Take screenshot on remote host and transfer to container"""
         try:
             # Generate remote temp file path
@@ -228,7 +236,7 @@ class RPATool(BaseTool):
             
             # Take screenshot on remote host
             python_code = f"import pyautogui; screenshot = pyautogui.screenshot(); screenshot.save('{remote_temp}'); print('{remote_temp}')"
-            result = self._execute_remote_python(host_string, python_code, timeout=60)
+            result = self._execute_remote_python(host_string, python_code, timeout=60, password=password)
             
             if not result["success"]:
                 return result
@@ -267,7 +275,7 @@ class RPATool(BaseTool):
                 "error": f"Screenshot failed: {str(e)}"
             }
     
-    def _run_app_remote(self, host_string: str, app_path: Optional[str]) -> Dict[str, Any]:
+    def _run_app_remote(self, host_string: str, app_path: Optional[str], password: Optional[str] = None) -> Dict[str, Any]:
         """Run application on remote host"""
         if not app_path:
             return {"success": False, "error": "app_path parameter is required"}
@@ -290,7 +298,7 @@ elif system == 'Windows':
     subprocess.Popen(['start', app_path], shell=True)
 print(f'Launched application: {{app_path}}')
 """
-            result = self._execute_remote_python(host_string, python_code)
+            result = self._execute_remote_python(host_string, python_code, password=password)
             
             if result["success"]:
                 return {
@@ -305,7 +313,7 @@ print(f'Launched application: {{app_path}}')
                 "error": f"Failed to launch application: {str(e)}"
             }
     
-    def _run_script_remote(self, host_string: str, script: Optional[str]) -> Dict[str, Any]:
+    def _run_script_remote(self, host_string: str, script: Optional[str], password: Optional[str] = None) -> Dict[str, Any]:
         """Run shell script on remote host"""
         if not script:
             return {"success": False, "error": "script parameter is required"}
