@@ -2,10 +2,11 @@
 from langchain_core.tools import BaseTool
 from telethon import TelegramClient
 from telegram import Bot
-from playwright.sync_api import sync_playwright, Page
+from playwright.async_api import Page
 import asyncio
 from typing import Optional
 import logging
+from app.core.browser_sync_wrapper import get_page_sync, close_page_sync
 
 logger = logging.getLogger(__name__)
 
@@ -66,16 +67,12 @@ class TelegramTool(BaseTool):
                 page: Optional[Page] = None
                 
                 try:
-                    # Get page from browser pool (v5.0 optimization)
+                    # Get page from browser pool (v5.2 async optimization)
                     if self.browser_pool:
-                        page = self.browser_pool.get_page()
-                        logger.debug("Using browser pool (v5.0)")
+                        page = get_page_sync(self.browser_pool)
+                        logger.debug("Using browser pool (v5.2)")
                     else:
-                        # Fallback to old method
-                        logger.warning("Browser pool not available, using fallback method")
-                        with sync_playwright() as p:
-                            browser = p.chromium.launch(headless=False)
-                            page = browser.new_page()
+                        raise RuntimeError("Browser pool not initialized")
                     
                     page.goto('https://web.telegram.org/')
                     page.wait_for_load_state('networkidle')
@@ -91,12 +88,12 @@ class TelegramTool(BaseTool):
                     return f"Message sent via Browser to {recipient}"
                 
                 finally:
-                    # Clean up page (v5.0: close context but keep browser running)
-                    if page and self.browser_pool:
+                    # Cleanup (v5.2)
+                    if page:
                         try:
-                            self.browser_pool.close_context(page)
+                            close_page_sync(page)
                         except Exception as e:
-                            logger.warning(f"Error closing page context: {e}")
+                            logger.warning(f"Error closing page: {e}")
             
             else:
                 return f"Unknown method: {method}"

@@ -1,8 +1,9 @@
 """Web Scraper Tool - Playwright-based web scraping with Browser Pool (v5.0)"""
 from langchain_core.tools import BaseTool
-from playwright.sync_api import Page
+from playwright.async_api import Page
 from typing import Optional
 import logging
+from app.core.browser_sync_wrapper import get_page_sync, close_page_sync
 
 logger = logging.getLogger(__name__)
 
@@ -18,18 +19,12 @@ class WebScraperTool(BaseTool):
     def _run(self, url: str) -> str:
         page: Optional[Page] = None
         try:
-            # Get page from browser pool (v5.0 optimization)
+            # Get page from browser pool (v5.2 async optimization)
             if self.browser_pool:
-                page = self.browser_pool.get_page()
-                logger.debug("Using browser pool (v5.0)")
+                page = get_page_sync(self.browser_pool)
+                logger.debug("Using browser pool (v5.2)")
             else:
-                # Fallback to old method if pool not available
-                from playwright.sync_api import sync_playwright
-                logger.warning("Browser pool not available, using fallback method")
-                with sync_playwright() as p:
-                    browser = p.chromium.launch(headless=True)
-                    context = browser.new_context()
-                    page = context.new_page()
+                raise RuntimeError("Browser pool not initialized")
             
             # Scrape page
             page.goto(url, timeout=30000)
@@ -42,12 +37,12 @@ class WebScraperTool(BaseTool):
             return f"Error scraping {url}: {str(e)}"
         
         finally:
-            # Clean up page (v5.0: close context but keep browser running)
-            if page and self.browser_pool:
+            # Cleanup (v5.2)
+            if page:
                 try:
-                    self.browser_pool.close_context(page)
+                    close_page_sync(page)
                 except Exception as e:
-                    logger.warning(f"Error closing page context: {e}")
+                    logger.warning(f"Error closing page: {e}")
     
     async def _arun(self, url: str) -> str:
         return self._run(url)

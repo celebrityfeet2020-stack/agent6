@@ -23,10 +23,10 @@ async def initialize_browser_pool_and_tools():
     """
     logger.info("[Startup] Initializing browser pool...")
     
-    # Initialize browser pool
+    # Initialize browser pool (async)
     browser_pool = get_browser_pool(headless=True)
-    browser_pool.start()  # Explicitly start to pre-load into memory
-    logger.info("✅ Browser pool pre-loaded into memory (v5.1)")
+    await browser_pool.start()  # Explicitly start to pre-load into memory
+    logger.info("✅ Browser pool pre-loaded into memory (v5.2)")
     
     # Initialize all 15 tools with browser pool
     tools = [

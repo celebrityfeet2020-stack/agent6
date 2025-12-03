@@ -1,7 +1,13 @@
-"""
-M3 Agent System v5.1 - Main Application
+"""FastAPI Backend for M3 Agent System
+M3 Agent System v5.2 - Main Application
 重大性能优化：全局浏览器池 + 模型预加载
 完整的 Agent 工作流，支持工具调用和 OpenAI 兼容接口
+
+v5.2 Critical Fix:
+- Migrated browser_pool from sync_playwright() to async_playwright()
+- Created sync/async bridge (browser_sync_wrapper) for tool compatibility
+- Fixed "Playwright Sync API inside asyncio loop" error
+- All Playwright tools updated to use async browser pool
 
 v5.1 Bug Fixes:
 - Fixed event loop conflict (browser pool initialization moved to startup event)
