@@ -30,7 +30,7 @@ import os
 
 app = FastAPI(
     title="Agent System",
-    version="3.6.0",
+    version="3.7.0",
     description="完整的 AI Agent 系统，支持SSE流式输出、工具调用、RPA自动化和多轮对话"
 )
 

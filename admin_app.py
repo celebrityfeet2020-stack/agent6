@@ -13,7 +13,8 @@ import httpx
 import json
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
+import threading
 
 # ============================================
 # FastAPI Application Setup
@@ -34,6 +35,44 @@ admin_app.add_middleware(
 
 # 模板目录
 templates = Jinja2Templates(directory="/app/admin_ui/templates")
+
+# 系统性能缓存（每小时更新一次）
+performance_cache = {
+    "data": {"cpu_usage": 0, "memory_usage": 0, "disk_usage": 0},
+    "last_update": None,
+    "lock": threading.Lock()
+}
+
+def update_performance_cache():
+    """更新系统性能缓存"""
+    import psutil
+    try:
+        cpu_percent = psutil.cpu_percent(interval=1.0)
+        memory = psutil.virtual_memory()
+        memory_percent = memory.percent
+        disk = psutil.disk_usage('/')
+        disk_percent = disk.percent
+        
+        with performance_cache["lock"]:
+            performance_cache["data"] = {
+                "cpu_usage": round(cpu_percent, 1),
+                "memory_usage": round(memory_percent, 1),
+                "disk_usage": round(disk_percent, 1)
+            }
+            performance_cache["last_update"] = datetime.now()
+    except Exception as e:
+        print(f"Error updating performance cache: {e}")
+
+def get_performance_data():
+    """获取系统性能数据（带缓存）"""
+    with performance_cache["lock"]:
+        # 如果缓存为空或超过1小时，更新缓存
+        if (performance_cache["last_update"] is None or 
+            datetime.now() - performance_cache["last_update"] > timedelta(hours=1)):
+            # 在后台线程更新，避免阻塞请求
+            threading.Thread(target=update_performance_cache, daemon=True).start()
+        
+        return performance_cache["data"].copy()
 
 # ============================================
 # Pydantic Models
@@ -225,18 +264,8 @@ async def get_status():
     except:
         pass
     
-    # 获取系统性能数据
-    import psutil
-    try:
-        cpu_percent = psutil.cpu_percent(interval=0.1)
-        memory = psutil.virtual_memory()
-        memory_percent = memory.percent
-        disk = psutil.disk_usage('/')
-        disk_percent = disk.percent
-    except:
-        cpu_percent = 0
-        memory_percent = 0
-        disk_percent = 0
+    # 获取系统性能数据（从缓存）
+    performance_data = get_performance_data()
     
     return {
         "timestamp": datetime.now().isoformat(),
@@ -253,11 +282,7 @@ async def get_status():
             "tools_count": tools_count,
             "api_port": 8000
         },
-        "system_performance": {
-            "cpu_usage": round(cpu_percent, 1),
-            "memory_usage": round(memory_percent, 1),
-            "disk_usage": round(disk_percent, 1)
-        }
+        "system_performance": performance_data
     }
 
 # ============================================
