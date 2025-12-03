@@ -1,4 +1,4 @@
-name: Build and Push AMD64 Docker Image (v3.5)
+name: Build and Push AMD64 Docker Image (v3.6.0-beta)
 
 on:
   push:
@@ -95,18 +95,18 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            junpeng999/m3-agent-system:v3.5-amd64
-            junpeng999/m3-agent-system:latest-amd64
+            junpeng999/agent-system:v3.6.0-beta-amd64
+            junpeng999/agent-system:latest-amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
       
       - name: Test Browser Automation
         run: |
           echo "=== Starting M3 Agent container for testing ==="
-          docker run -d --name m3-test \
+          docker run -d --name agent-test \
             -p 8000:8000 \
             -e OPENAI_API_KEY="test-key" \
-            junpeng999/m3-agent-system:v3.5-amd64
+            junpeng999/agent-system:v3.6.0-beta-amd64
           
           echo "=== Waiting for container to be ready ==="
           sleep 30
@@ -121,8 +121,8 @@ jobs:
             --max-time 60 || echo "Browser test timed out (expected in CI)"
           
           echo "=== Checking container logs ==="
-          docker logs m3-test --tail 50
+          docker logs agent-test --tail 50
           
           echo "=== Cleaning up ==="
-          docker stop m3-test
-          docker rm m3-test
+          docker stop agent-test
+          docker rm agent-test

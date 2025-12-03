@@ -35,10 +35,10 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # M3 Agent API
-  m3-agent-api:
-    image: m3-agent:v2.2.0
-    container_name: m3-agent-api
+  # Agent System API
+  agent-system-api:
+    image: agent-system:v3.6.0-beta
+    container_name: agent-system-api
     build:
       context: .
       dockerfile: Dockerfile
@@ -72,8 +72,8 @@ services:
       - m3_uploads:/app/uploads
       - m3_easyocr:/root/.EasyOCR
     ports:
-      - "8001:8001"
-      - "8002:8002"
+      - "8888:8000"  # Agent API
+      - "8889:8002"  # Admin Panel
     depends_on:
       postgres:
         condition: service_healthy

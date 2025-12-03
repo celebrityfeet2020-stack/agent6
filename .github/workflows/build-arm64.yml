@@ -1,4 +1,4 @@
-name: Build and Push ARM64 Docker Image (v3.5)
+name: Build and Push ARM64 Docker Image (v3.6.0-beta)
 
 on:
   push:
@@ -85,15 +85,15 @@ jobs:
           echo "=== 清理后磁盘空间 ==="
           df -h
 
-      - name: Build and push ARM64 Docker image (v3.5)
+      - name: Build and push ARM64 Docker image (v3.6.0-beta)
         uses: docker/build-push-action@v5
         with:
           context: .
           platforms: linux/arm64
           push: true
           tags: |
-            junpeng999/m3-agent-system:latest
-            junpeng999/m3-agent-system:v3.5
-            junpeng999/m3-agent-system:v3.5-arm64
+            junpeng999/agent-system:latest
+            junpeng999/agent-system:v3.6.0-beta
+            junpeng999/agent-system:v3.6.0-beta-arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max

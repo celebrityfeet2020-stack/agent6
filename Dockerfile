@@ -1,4 +1,4 @@
-# M3 Agent System v3.5 - Fixed sshpass missing issue for RPA password authentication
+# Agent System v3.6.0-beta - Fixed admin panel port mapping and system renaming
 # Base Image: Playwright (includes Chromium, Firefox, WebKit)
 # This avoids browser compatibility issues
 
