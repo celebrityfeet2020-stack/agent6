@@ -1,9 +1,13 @@
-"""Telegram Tool - Bot API + Client API + Browser"""
+"""Telegram Tool - Bot API + Client API + Browser (v5.0)"""
 from langchain_core.tools import BaseTool
 from telethon import TelegramClient
 from telegram import Bot
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, Page
 import asyncio
+from typing import Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 class TelegramTool(BaseTool):
     name: str = "telegram_tool"
@@ -11,6 +15,8 @@ class TelegramTool(BaseTool):
     Input format: method|params
     Methods: bot_send, client_send, browser_send
     Example: bot_send|chat_id:123456|message:Hello"""
+    
+    browser_pool: Optional[object] = None  # Will be injected from main.py (v5.0)
     
     def _run(self, input_str: str) -> str:
         try:
@@ -54,13 +60,23 @@ class TelegramTool(BaseTool):
                 return f"Message sent via Client API to {recipient}"
             
             elif method == "browser_send":
-                # Browser automation method
+                # Browser automation method (v5.0: using browser pool)
                 message = params.get('message', '')
                 recipient = params.get('recipient', '')
+                page: Optional[Page] = None
                 
-                with sync_playwright() as p:
-                    browser = p.chromium.launch(headless=False)
-                    page = browser.new_page()
+                try:
+                    # Get page from browser pool (v5.0 optimization)
+                    if self.browser_pool:
+                        page = self.browser_pool.get_page()
+                        logger.debug("Using browser pool (v5.0)")
+                    else:
+                        # Fallback to old method
+                        logger.warning("Browser pool not available, using fallback method")
+                        with sync_playwright() as p:
+                            browser = p.chromium.launch(headless=False)
+                            page = browser.new_page()
+                    
                     page.goto('https://web.telegram.org/')
                     page.wait_for_load_state('networkidle')
                     
@@ -72,8 +88,15 @@ class TelegramTool(BaseTool):
                     page.fill('[contenteditable="true"]', message)
                     page.press('[contenteditable="true"]', 'Enter')
                     
-                    browser.close()
                     return f"Message sent via Browser to {recipient}"
+                
+                finally:
+                    # Clean up page (v5.0: close context but keep browser running)
+                    if page and self.browser_pool:
+                        try:
+                            self.browser_pool.close_context(page)
+                        except Exception as e:
+                            logger.warning(f"Error closing page context: {e}")
             
             else:
                 return f"Unknown method: {method}"

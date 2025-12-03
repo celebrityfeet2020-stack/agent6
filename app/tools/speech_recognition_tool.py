@@ -55,10 +55,18 @@ class SpeechRecognitionTool(BaseTool):
     """
     args_schema: Type[BaseModel] = SpeechRecognitionInput
     
-    def __init__(self):
+    def __init__(self, preload_model: bool = True, model_size: str = "small"):
         super().__init__()
         self._whisper_model = None
-        self._model_size = "small"  # Default model size (pre-installed in v2.7)
+        self._model_size = model_size  # Default model size (pre-installed in v2.7)
+        
+        # v5.0: Pre-load Whisper model at initialization
+        if preload_model:
+            try:
+                self._load_model(model_size)
+                logger.info(f"✅ Whisper model '{model_size}' pre-loaded (v5.0)")
+            except Exception as e:
+                logger.warning(f"Failed to pre-load Whisper model: {e}. Will load on first use.")
     
     def _load_model(self, model_size: str = "small"):
         """Load Whisper model (lazy loading)."""
