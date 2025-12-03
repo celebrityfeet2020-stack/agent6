@@ -179,7 +179,8 @@ def get_browser_pool(headless: bool = True) -> BrowserPool:
     
     if _global_browser_pool is None:
         _global_browser_pool = BrowserPool(headless=headless)
-        _global_browser_pool.start()
+        # v5.1: Lazy loading - don't start immediately to avoid event loop conflicts
+        # Browser will auto-start on first get_page() call
     
     return _global_browser_pool
 

@@ -1,7 +1,11 @@
 """
-M3 Agent System v5.0 - Main Application
+M3 Agent System v5.1 - Main Application
 重大性能优化：全局浏览器池 + 模型预加载
 完整的 Agent 工作流，支持工具调用和 OpenAI 兼容接口
+
+v5.1 Bug Fixes:
+- Fixed event loop conflict (browser pool initialization moved to startup event)
+- Fixed frontend nginx config (removed backend proxy)
 
 v5.0 Performance Improvements:
 - Browser Pool: 90% faster Playwright operations (5-10s → 0.5-1s)
@@ -36,8 +40,8 @@ import os
 
 app = FastAPI(
     title="Agent System",
-    version="5.0.0",
-    description="M3 Agent v5.0 - 重大性能优化：全局浏览器池+模型预加载，极大提升工具使用效率。支持SSE流式输出、工具调用、RPA自动化、多轮对话和性能监控"
+    version="5.1.0",
+    description="M3 Agent v5.1 - Bug Fix: Event loop conflict + nginx config. 重大性能优化：全局浏览器池+模型预加载，极大提升工具使用效率。支持SSE流式输出、工具调用、RPA自动化、多轮对话和性能监控"
 )
 
 app.add_middleware(
@@ -47,6 +51,40 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# v5.1: Startup event to initialize browser pool, tools, and workflow
+@app.on_event("startup")
+async def startup_event():
+    """Initialize browser pool, tools, and workflow on application startup."""
+    global browser_pool, tools, llm_with_tools, app_graph
+    from app.core.startup import initialize_browser_pool_and_tools
+    
+    # Initialize browser pool and tools
+    browser_pool, tools = await initialize_browser_pool_and_tools()
+    
+    # Bind tools to LLM
+    llm_with_tools = llm.bind_tools(tools)
+    
+    # Compile workflow (moved from module level to avoid using None llm_with_tools)
+    from langgraph.checkpoint.memory import MemorySaver
+    from langgraph.graph import StateGraph, MessagesState, END
+    workflow = StateGraph(MessagesState)
+    workflow.add_node("agent", agent_node)
+    workflow.add_node("tools", tool_node_with_error_handling)
+    workflow.set_entry_point("agent")
+    workflow.add_conditional_edges(
+        "agent",
+        should_continue,
+        {
+            "tools": "tools",
+            END: END
+        }
+    )
+    workflow.add_edge("tools", "agent")
+    checkpointer = MemorySaver()
+    app_graph = workflow.compile(checkpointer=checkpointer)
+    
+    logger.info("✅ Startup complete: browser pool, tools, and workflow ready")
 
 # 注册Fleet API路由（用于与D5管理航母和Temporal调度系统对接）
 from app.api.fleet_api import router as fleet_router
@@ -69,32 +107,13 @@ llm = ChatOpenAI(
     api_key="not-needed"
 )
 
-# v5.0: Initialize Global Browser Pool (Performance Optimization)
+# v5.1: Browser pool and tools will be initialized in startup event
 from app.core.browser_pool import get_browser_pool
-browser_pool = get_browser_pool(headless=True)
-logger.info("✅ Global browser pool initialized (v5.0)")
+browser_pool = None
+tools = []  # Will be initialized in startup event
 
-# Initialize all 15 tools (v5.0: with browser pool and model pre-loading)
-tools = [
-    WebSearchTool(),
-    WebScraperTool(browser_pool=browser_pool),  # v5.0: Browser pool
-    CodeExecutorTool(),
-    FileOperationsTool(),
-    ImageOCRTool(),
-    ImageAnalysisTool(),  # v5.0: Pre-loaded Haar Cascade
-    SSHTool(),
-    GitTool(),
-    DataAnalysisTool(),
-    BrowserAutomationTool(browser_pool=browser_pool),  # v5.0: Browser pool
-    UniversalAPITool(),
-    TelegramTool(browser_pool=browser_pool),  # v5.0: Browser pool
-    SpeechRecognitionTool(preload_model=True, model_size="small"),  # v5.0: Pre-loaded Whisper
-    RPATool(),
-    FileSyncTool(),
-]
-
-# Bind tools to LLM
-llm_with_tools = llm.bind_tools(tools)
+# v5.1: llm_with_tools will be set in startup event
+llm_with_tools = None
 
 # ============================================
 # Agent Workflow (LangGraph)
@@ -189,35 +208,9 @@ def tool_node_with_error_handling(state: MessagesState) -> MessagesState:
 
 tool_node = tool_node_with_error_handling
 
-# 构建 LangGraph 工作流
-workflow = StateGraph(MessagesState)
-
-# 添加节点
-workflow.add_node("agent", agent_node)
-workflow.add_node("tools", tool_node_with_error_handling)
-
-# 设置入口点
-workflow.set_entry_point("agent")
-
-# 添加条件边
-workflow.add_conditional_edges(
-    "agent",
-    should_continue,
-    {
-        "tools": "tools",
-        END: END
-    }
-)
-
-# 工具执行后，回到 agent 节点
-workflow.add_edge("tools", "agent")
-
-# 配置内存持久化（使用 MemorySaver）
-# v2.5: 已移除PostgreSQL依赖，使用内存checkpointer
-# 未来将通过 D5 记忆航母实现集中式记忆管理
-checkpointer = MemorySaver()
-app_graph = workflow.compile(checkpointer=checkpointer)
-print("✓ LangGraph workflow compiled with MemorySaver (in-memory checkpointer)")
+# v5.1: Workflow compilation moved to startup event
+# This avoids using None llm_with_tools during module initialization
+app_graph = None  # Will be set in startup event
 
 # ============================================
 # Pydantic Models
@@ -263,7 +256,7 @@ class OpenAIModelsResponse(BaseModel):
 @app.get("/")
 async def root():
     return {
-        "status": "M3 Agent System v3.9.0 Running",
+        "status": "M3 Agent System v5.1.0 Running",
         "tools": len(tools),
         "features": ["Agent Workflow", "Tool Calling", "OpenAI Compatible"]
     }
