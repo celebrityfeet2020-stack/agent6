@@ -1,4 +1,4 @@
-# M3 Agent System v2.8 - Cross-platform RPA + psutil fix + browser_automation test
+# M3 Agent System v3.5 - Fixed sshpass missing issue for RPA password authentication
 # Base Image: Playwright (includes Chromium, Firefox, WebKit)
 # This avoids browser compatibility issues
 
@@ -38,6 +38,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     git \
     openssh-client \
+    sshpass \
     ca-certificates \
     # RPA dependencies
     x11-utils \
