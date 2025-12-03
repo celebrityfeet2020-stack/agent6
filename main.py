@@ -30,7 +30,7 @@ import os
 
 app = FastAPI(
     title="M3 Agent System",
-    version="3.0.1",
+    version="3.1.0",
     description="完整的 AI Agent 系统，支持工具调用、RPA自动化和多轮对话"
 )
 
@@ -301,6 +301,22 @@ async def agent_chat(request: ChatRequest):
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Agent execution failed: {str(e)}")
+
+@app.post("/api/chat")
+async def simple_chat(request: ChatRequest):
+    """
+    简化的聊天接口（兼容旧版本）
+    
+    这是 /api/agent/chat 的别名，提供更简洁的API路径。
+    支持完整的Agent工作流，包括工具调用和多轮对话。
+    
+    Args:
+        request: ChatRequest with message and optional thread_id
+    
+    Returns:
+        ChatResponse with agent response and tool call info
+    """
+    return await agent_chat(request)
 
 @app.get("/api/tools")
 async def list_tools():
