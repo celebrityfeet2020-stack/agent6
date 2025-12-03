@@ -1,5 +1,5 @@
 """
-性能监控模块（v3.8）
+性能监控模块（v3.9）
 """
 from .performance_monitor import (
     get_performance_data,

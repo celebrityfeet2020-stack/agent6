@@ -1,5 +1,5 @@
 """
-M3 Agent System v3.8.0 - Logging Configuration
+M3 Agent System v3.9.0 - Logging Configuration
 统一的日志配置，支持文件转转和结构化日志
 """
 

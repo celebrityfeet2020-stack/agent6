@@ -32,6 +32,12 @@ class ThreadResponse(BaseModel):
     metadata: Dict[str, Any]
 
 
+class DeleteThreadResponse(BaseModel):
+    """删除线程响应"""
+    status: str = Field(..., description="删除状态")
+    thread_id: str = Field(..., description="被删除的线程ID")
+
+
 class RunRequest(BaseModel):
     """运行请求"""
     input: Any = Field(..., description="User input message (string or dict with messages)")
@@ -146,7 +152,7 @@ async def get_thread_endpoint(assistant_id: str, thread_id: str):
     )
 
 
-@router.delete("/{assistant_id}/threads/{thread_id}")
+@router.delete("/{assistant_id}/threads/{thread_id}", response_model=DeleteThreadResponse)
 async def delete_thread_endpoint(assistant_id: str, thread_id: str):
     """
     删除线程

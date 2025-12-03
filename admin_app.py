@@ -1,7 +1,7 @@
 """
-M3 Agent System v3.8.0 - Admin Panel
+M3 Agent System v3.9.0 - Admin Panel
 独立运行在端口 8002，提供管理界面和 API
-v3.8新增：多框架兼容、模型性能监控、API性能监控、2-2-2布局
+v3.9修复：后端检测bug、性能监控不切换模型
 """
 
 from fastapi import FastAPI, HTTPException, Request
@@ -30,7 +30,7 @@ from app.performance.performance_monitor import (
 
 admin_app = FastAPI(
     title="M3 Agent Admin Panel",
-    version="3.8.0"
+    version="3.9.0"
 )
 
 admin_app.add_middleware(
@@ -132,44 +132,26 @@ def save_prompts(prompts: List[Dict]):
     with open(PROMPTS_FILE, 'w', encoding='utf-8') as f:
         json.dump(prompts, f, ensure_ascii=False, indent=2)
 
-async def detect_llm_backend():
-    """检测 LLM 后端类型（v3.8增强版：支持LM Studio/Ollama/llama.cpp/MLX）"""
+async def get_available_models():
+    """获取可用模型列表（v3.9简化版：不检测后端类型）"""
     llm_base_url = os.getenv("LLM_BASE_URL", "http://192.168.9.125:8000/v1")
     
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             response = await client.get(f"{llm_base_url}/models")
             data = response.json()
-            headers = response.headers
             
-            # 1. Ollama: 使用 "models" 字段
+            # Ollama格式
             if "models" in data:
-                return "Ollama", data["models"]
+                return data["models"]
             
-            # 2. 检查 data 字段
+            # OpenAI兼容格式
             if "data" in data and isinstance(data["data"], list):
-                if len(data["data"]) > 0:
-                    first_model_id = data["data"][0].get("id", "")
-                    server_header = headers.get("server", "").lower()
-                    
-                    # 2.1 LM Studio: 模型ID带斜杠
-                    if "/" in first_model_id:
-                        return "LM Studio", data["data"]
-                    
-                    # 2.2 llama.cpp: 检查响应头
-                    if "llama" in server_header or "llama.cpp" in server_header:
-                        return "llama.cpp", data["data"]
-                    
-                    # 2.3 MLX: 检查响应头
-                    if "mlx" in server_header:
-                        return "MLX", data["data"]
-                    
-                    # 2.4 通用OpenAI兼容
-                    return "OpenAI Compatible", data["data"]
+                return data["data"]
             
-            return "Unknown", []
+            return []
     except Exception as e:
-        return "Error", []
+        return []
 
 # ============================================
 # Web Interface
@@ -186,7 +168,7 @@ async def dashboard(request: Request):
 
 @admin_app.get("/api/benchmark")
 async def run_benchmark():
-    """运行性能基准测试（v3.8：只测试当前运行的模型）"""
+    """运行性能基准测试（v3.9：只测试当前运行的模型）"""
     try:
         import time
         
@@ -245,12 +227,12 @@ async def run_benchmark():
 
 @admin_app.get("/api/status")
 async def get_status():
-    """获取系统状态（v3.8增强版：包含模型性能和API性能）"""
+    """获取系统状态（v3.9简化版：删除后端类型检测，保留性能监控）"""
     llm_base_url = os.getenv("LLM_BASE_URL", "http://192.168.9.125:8000/v1")
     llm_model = os.getenv("LLM_MODEL", "minimax/minimax-m2")
     
-    # 检测 LLM 后端
-    backend_type, models = await detect_llm_backend()
+    # 获取可用模型列表
+    models = await get_available_models()
     
     # 动态获取工具数量
     tools_count = 15  # 默认15个工具
@@ -269,8 +251,7 @@ async def get_status():
     return {
         "timestamp": datetime.now().isoformat(),
         "llm_backend": {
-            "type": backend_type,
-            "status": "running" if backend_type != "Error" else "error",
+            "status": "running" if models else "error",
             "current_model": llm_model,
             "available_models": [m.get("id", m.get("name", "unknown")) for m in models] if models else [llm_model],
             "base_url": llm_base_url

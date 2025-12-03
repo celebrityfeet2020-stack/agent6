@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M3 Agent 管理面板 v3.8.0</title>
+    <title>M3 Agent 管理面板 v3.9.0</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; }
@@ -76,12 +76,12 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚀 M3 Agent 管理面板 v3.8.0</h1>
+            <h1>🚀 M3 Agent 管理面板 v3.9.0</h1>
             <p>完整的 Agent 系统 | 支持多种LLM框架 | 实时性能监控</p>
         </div>
 
         <div class="note">
-            💡 <strong>v3.8新特性：</strong>支持LM Studio/Ollama/llama.cpp/MLX多种框架 | 模型性能监控 | API性能监控 | 每小时自动更新
+            💡 <strong>v3.9优化：</strong>简化后端检测逻辑 | 修复性能监控模型切换问题 | 优化模型列表显示 | 修复API文档问题
         </div>
 
         <!-- 第一行：LLM后端状态 + Agent API状态 -->
@@ -90,12 +90,13 @@
             <div class="card">
                 <h2>🤖 LLM 后端状态</h2>
                 <span class="status running" id="llm-status">运行中</span>
-                <span class="badge" id="backend-type">检测中...</span>
                 <div class="model-info">
-                    <p><strong>后端类型:</strong> <span id="backend-name">加载中...</span></p>
                     <p><strong>API 地址:</strong> <span id="base-url" style="font-size: 12px;">加载中...</span></p>
                     <p><strong>当前模型:</strong> <span id="current-model">加载中...</span></p>
-                    <p><strong>可用模型:</strong> <span id="available-models">加载中...</span></p>
+                    <p><strong>可用模型:</strong></p>
+                    <ul id="available-models" class="tools-list" style="max-height: 150px; overflow-y: auto;">
+                        <li>加载中...</li>
+                    </ul>
                 </div>
                 <button onclick="refreshStatus()">🔄 刷新状态</button>
             </div>
@@ -234,11 +235,16 @@
                 const data = await response.json();
                 
                 // 更新 LLM 后端状态
-                document.getElementById('backend-name').textContent = data.llm_backend.type;
-                document.getElementById('backend-type').textContent = data.llm_backend.type;
                 document.getElementById('base-url').textContent = data.llm_backend.base_url;
                 document.getElementById('current-model').textContent = data.llm_backend.current_model;
-                document.getElementById('available-models').textContent = data.llm_backend.available_models.join(', ');
+                
+                // 更新可用模型列表
+                const modelsUl = document.getElementById('available-models');
+                if (data.llm_backend.available_models && data.llm_backend.available_models.length > 0) {
+                    modelsUl.innerHTML = data.llm_backend.available_models.map(model => `<li>${model}</li>`).join('');
+                } else {
+                    modelsUl.innerHTML = '<li>无可用模型</li>';
+                }
                 
                 // 更新 Agent API 状态
                 document.getElementById('agent-model').textContent = data.agent_api.configured_model;

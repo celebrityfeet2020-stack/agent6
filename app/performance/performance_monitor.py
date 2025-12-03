@@ -1,6 +1,7 @@
 """
-性能监控模块（v3.8）
+性能监控模块（v3.9.0）
 监控模型性能和API性能，每小时自动更新一次
+v3.9修复：使用get_current_model()避免模型切换
 """
 import time
 import asyncio
@@ -58,10 +59,35 @@ def record_api_request(success: bool, response_time_ms: float):
     _api_stats["hourly_requests"] = [(h, c) for h, c in _api_stats["hourly_requests"] if h > cutoff_hour]
 
 
+async def get_current_model(llm_base_url: str) -> Optional[str]:
+    """获取当前运行的模型"""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(f"{llm_base_url}/models")
+            data = response.json()
+            models = data.get("data", [])
+            if models:
+                # 返回第一个模型（通常是当前加载的模型）
+                return models[0].get("id")
+    except Exception as e:
+        print(f"[Performance Monitor] Failed to get current model: {e}")
+    return None
+
+
 async def measure_model_performance() -> Dict:
-    """测量模型性能（只测试当前运行的模型）"""
+    """测量模型性能（使用当前运行的模型，不切换模型）"""
     llm_base_url = os.getenv("LLM_BASE_URL", "http://192.168.9.125:8000/v1")
-    llm_model = os.getenv("LLM_MODEL", "minimax/minimax-m2")
+    
+    # 获取当前运行的模型
+    current_model = await get_current_model(llm_base_url)
+    if not current_model:
+        print("[Performance Monitor] No model currently loaded, skipping performance test")
+        return {
+            "tokens_per_second": 0,
+            "time_to_first_token_ms": 0,
+            "average_latency_ms": 0,
+            "last_updated": datetime.now().isoformat()
+        }
     
     test_prompt = "你好"
     
@@ -75,7 +101,7 @@ async def measure_model_performance() -> Dict:
                 "POST",
                 f"{llm_base_url}/chat/completions",
                 json={
-                    "model": llm_model,
+                    "model": current_model,  # 使用当前模型
                     "messages": [{"role": "user", "content": test_prompt}],
                     "max_tokens": 50,
                     "stream": True
@@ -95,7 +121,7 @@ async def measure_model_performance() -> Dict:
             response = await client.post(
                 f"{llm_base_url}/chat/completions",
                 json={
-                    "model": llm_model,
+                    "model": current_model,  # 使用当前模型
                     "messages": [{"role": "user", "content": test_prompt}],
                     "max_tokens": 50
                 }
@@ -107,6 +133,8 @@ async def measure_model_performance() -> Dict:
         
         # 计算tokens/s
         tokens_per_second = round(completion_tokens / (total_latency / 1000), 2) if total_latency > 0 else 0
+        
+        print(f"[Performance Monitor] Model: {current_model}, Tokens/s: {tokens_per_second}, TTFT: {ttft}ms")
         
         return {
             "tokens_per_second": tokens_per_second,
