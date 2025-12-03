@@ -1,6 +1,6 @@
 """
-M3 Agent System v2.2.0 - Logging Configuration
-统一的日志配置，支持文件轮转和结构化日志
+M3 Agent System v3.8.0 - Logging Configuration
+统一的日志配置，支持文件转转和结构化日志
 """
 
 import logging

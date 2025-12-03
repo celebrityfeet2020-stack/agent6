@@ -30,8 +30,8 @@ import os
 
 app = FastAPI(
     title="Agent System",
-    version="3.7.0",
-    description="完整的 AI Agent 系统，支持SSE流式输出、工具调用、RPA自动化和多轮对话"
+    version="3.8.0",
+    description="完整的 AI Agent 系统，支持SSE流式输出、工具调用、RPA自动化、多轮对话和性能监控"
 )
 
 app.add_middleware(
@@ -252,7 +252,7 @@ class OpenAIModelsResponse(BaseModel):
 @app.get("/")
 async def root():
     return {
-        "status": "M3 Agent System v2.2.0 Running",
+        "status": "M3 Agent System v3.8.0 Running",
         "tools": len(tools),
         "features": ["Agent Workflow", "Tool Calling", "OpenAI Compatible"]
     }

@@ -1,6 +1,7 @@
 """
-M3 Agent System v2.2.0 - Admin Panel
+M3 Agent System v3.8.0 - Admin Panel
 独立运行在端口 8002，提供管理界面和 API
+v3.8新增：多框架兼容、模型性能监控、API性能监控、2-2-2布局
 """
 
 from fastapi import FastAPI, HTTPException, Request
@@ -15,6 +16,13 @@ import os
 import uuid
 from datetime import datetime, timedelta
 import threading
+import asyncio
+from app.performance.performance_monitor import (
+    get_performance_data,
+    update_performance_cache,
+    performance_monitor_loop,
+    record_api_request
+)
 
 # ============================================
 # FastAPI Application Setup
@@ -22,7 +30,7 @@ import threading
 
 admin_app = FastAPI(
     title="M3 Agent Admin Panel",
-    version="2.2.0"
+    version="3.8.0"
 )
 
 admin_app.add_middleware(
@@ -36,43 +44,19 @@ admin_app.add_middleware(
 # 模板目录
 templates = Jinja2Templates(directory="/app/admin_ui/templates")
 
-# 系统性能缓存（每小时更新一次）
-performance_cache = {
-    "data": {"cpu_usage": 0, "memory_usage": 0, "disk_usage": 0},
-    "last_update": None,
-    "lock": threading.Lock()
-}
+# ============================================
+# Startup Event
+# ============================================
 
-def update_performance_cache():
-    """更新系统性能缓存"""
-    import psutil
-    try:
-        cpu_percent = psutil.cpu_percent(interval=1.0)
-        memory = psutil.virtual_memory()
-        memory_percent = memory.percent
-        disk = psutil.disk_usage('/')
-        disk_percent = disk.percent
-        
-        with performance_cache["lock"]:
-            performance_cache["data"] = {
-                "cpu_usage": round(cpu_percent, 1),
-                "memory_usage": round(memory_percent, 1),
-                "disk_usage": round(disk_percent, 1)
-            }
-            performance_cache["last_update"] = datetime.now()
-    except Exception as e:
-        print(f"Error updating performance cache: {e}")
-
-def get_performance_data():
-    """获取系统性能数据（带缓存）"""
-    with performance_cache["lock"]:
-        # 如果缓存为空或超过1小时，更新缓存
-        if (performance_cache["last_update"] is None or 
-            datetime.now() - performance_cache["last_update"] > timedelta(hours=1)):
-            # 在后台线程更新，避免阻塞请求
-            threading.Thread(target=update_performance_cache, daemon=True).start()
-        
-        return performance_cache["data"].copy()
+@admin_app.on_event("startup")
+async def startup_event():
+    """启动时初始化性能监控"""
+    print("[Admin Panel] Initializing performance monitoring...")
+    # 立即更新一次性能数据
+    await update_performance_cache()
+    # 启动后台监控任务
+    asyncio.create_task(performance_monitor_loop())
+    print("[Admin Panel] Performance monitoring started")
 
 # ============================================
 # Pydantic Models
@@ -149,26 +133,41 @@ def save_prompts(prompts: List[Dict]):
         json.dump(prompts, f, ensure_ascii=False, indent=2)
 
 async def detect_llm_backend():
-    """检测 LLM 后端类型"""
+    """检测 LLM 后端类型（v3.8增强版：支持LM Studio/Ollama/llama.cpp/MLX）"""
     llm_base_url = os.getenv("LLM_BASE_URL", "http://192.168.9.125:8000/v1")
     
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             response = await client.get(f"{llm_base_url}/models")
             data = response.json()
+            headers = response.headers
             
-            # 判断后端类型
+            # 1. Ollama: 使用 "models" 字段
+            if "models" in data:
+                return "Ollama", data["models"]
+            
+            # 2. 检查 data 字段
             if "data" in data and isinstance(data["data"], list):
                 if len(data["data"]) > 0:
-                    first_model = data["data"][0]
-                    if "/" in first_model.get("id", ""):
+                    first_model_id = data["data"][0].get("id", "")
+                    server_header = headers.get("server", "").lower()
+                    
+                    # 2.1 LM Studio: 模型ID带斜杠
+                    if "/" in first_model_id:
                         return "LM Studio", data["data"]
-                    else:
-                        return "OpenAI Compatible", data["data"]
-            elif "models" in data:
-                return "Ollama", data["models"]
-            else:
-                return "Unknown", []
+                    
+                    # 2.2 llama.cpp: 检查响应头
+                    if "llama" in server_header or "llama.cpp" in server_header:
+                        return "llama.cpp", data["data"]
+                    
+                    # 2.3 MLX: 检查响应头
+                    if "mlx" in server_header:
+                        return "MLX", data["data"]
+                    
+                    # 2.4 通用OpenAI兼容
+                    return "OpenAI Compatible", data["data"]
+            
+            return "Unknown", []
     except Exception as e:
         return "Error", []
 
@@ -187,58 +186,58 @@ async def dashboard(request: Request):
 
 @admin_app.get("/api/benchmark")
 async def run_benchmark():
-    """运行性能基准测试"""
+    """运行性能基准测试（v3.8：只测试当前运行的模型）"""
     try:
         import time
         
         llm_base_url = os.getenv("LLM_BASE_URL", "http://192.168.9.125:8000/v1")
-        
-        # 获取所有模型
-        async with httpx.AsyncClient() as client:
-            models_resp = await client.get(f"{llm_base_url}/models", timeout=10)
-            models = models_resp.json().get("data", [])
+        llm_model = os.getenv("LLM_MODEL", "minimax/minimax-m2")
         
         results = []
         test_prompt = "你好，请用一句话介绍你自己。"
         
-        for model in models[:5]:  # 最多测试 5 个模型
-            model_id = model.get("id")
-            try:
-                start_time = time.time()
-                
-                async with httpx.AsyncClient() as client:
-                    response = await client.post(
-                        f"{llm_base_url}/chat/completions",
-                        json={
-                            "model": model_id,
-                            "messages": [{"role": "user", "content": test_prompt}],
-                            "max_tokens": 50
-                        },
-                        timeout=30
-                    )
-                
-                end_time = time.time()
-                latency = round((end_time - start_time) * 1000, 2)  # ms
-                
-                # 计算 tokens/s
-                response_data = response.json()
-                usage = response_data.get("usage", {})
-                total_tokens = usage.get("total_tokens", 0)
-                tokens_per_second = round(total_tokens / (end_time - start_time), 2) if total_tokens > 0 else 0
-                
-                results.append({
-                    "model": model_id,
-                    "status": "success",
-                    "latency_ms": latency,
-                    "tokens_per_second": tokens_per_second,
-                    "total_tokens": total_tokens
-                })
-            except Exception as e:
-                results.append({
-                    "model": model_id,
-                    "status": "failed",
-                    "error": str(e)
-                })
+        # 只测试当前运行的模型
+        try:
+            start_time = time.time()
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{llm_base_url}/chat/completions",
+                    json={
+                        "model": llm_model,
+                        "messages": [{"role": "user", "content": test_prompt}],
+                        "max_tokens": 50
+                    },
+                    timeout=30
+                )
+            
+            end_time = time.time()
+            latency = round((end_time - start_time) * 1000, 2)  # ms
+            
+            # 计算 tokens/s
+            response_data = response.json()
+            usage = response_data.get("usage", {})
+            total_tokens = usage.get("total_tokens", 0)
+            completion_tokens = usage.get("completion_tokens", 0)
+            tokens_per_second = round(completion_tokens / (end_time - start_time), 2) if completion_tokens > 0 else 0
+            
+            results.append({
+                "model": llm_model,
+                "status": "success",
+                "latency_ms": latency,
+                "tokens_per_second": tokens_per_second,
+                "total_tokens": total_tokens,
+                "completion_tokens": completion_tokens
+            })
+        except Exception as e:
+            results.append({
+                "model": llm_model,
+                "status": "failed",
+                "error": str(e)
+            })
+        
+        # 更新性能缓存
+        await update_performance_cache()
         
         return {"benchmark_results": results}
     except Exception as e:
@@ -246,7 +245,7 @@ async def run_benchmark():
 
 @admin_app.get("/api/status")
 async def get_status():
-    """获取系统状态（v3.6增强版）"""
+    """获取系统状态（v3.8增强版：包含模型性能和API性能）"""
     llm_base_url = os.getenv("LLM_BASE_URL", "http://192.168.9.125:8000/v1")
     llm_model = os.getenv("LLM_MODEL", "minimax/minimax-m2")
     
@@ -254,7 +253,7 @@ async def get_status():
     backend_type, models = await detect_llm_backend()
     
     # 动态获取工具数量
-    tools_count = 15  # v3.6: 默认15个工具
+    tools_count = 15  # 默认15个工具
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             response = await client.get("http://localhost:8000/health")
@@ -264,7 +263,7 @@ async def get_status():
     except:
         pass
     
-    # 获取系统性能数据（从缓存）
+    # 获取性能数据（从缓存）
     performance_data = get_performance_data()
     
     return {
@@ -282,7 +281,8 @@ async def get_status():
             "tools_count": tools_count,
             "api_port": 8000
         },
-        "system_performance": performance_data
+        "model_performance": performance_data.get("model_performance", {}),
+        "api_performance": performance_data.get("api_performance", {})
     }
 
 # ============================================
