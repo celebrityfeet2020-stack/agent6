@@ -34,7 +34,7 @@ export const M3Thread = ({
             </div>
             <div className="text-center">
               <h2 className="text-2xl font-bold text-foreground tracking-tight font-mono">M3 AGENT SYSTEM</h2>
-              <p className="text-sm mt-2 font-mono text-primary/60">Cyber-Tactical Command Interface v3.5</p>
+              <p className="text-sm mt-2 font-mono text-primary/60">Cyber-Tactical Command Interface v2.0.0</p>
               <p className="text-xs mt-1 font-mono text-muted-foreground">系统在线。等待指令。</p>
             </div>
           </div>

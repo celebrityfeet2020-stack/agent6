@@ -120,6 +120,35 @@ export default function ChatPage() {
   const [lastSync, setLastSync] = useState<Date>(new Date());
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [showLogsMobile, setShowLogsMobile] = useState(false);
+  const [agentName, setAgentName] = useState("M3 AGENT (Loading...)");
+
+  // Fetch model name from backend
+  useEffect(() => {
+    const fetchModelName = async () => {
+      try {
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8888";
+        const res = await fetch(`${API_BASE_URL}/health`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.llm_model) {
+            // Format: "Qwen/Qwen2-72B-Instruct" -> "M3 AGENT (Qwen2-72B)"
+            const modelShort = data.llm_model.split('/').pop().replace('-Instruct', '');
+            setAgentName(`M3 AGENT (${modelShort})`);
+          } else {
+            setAgentName("M3 AGENT (Unknown Model)");
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch model name:", e);
+        setAgentName("M3 AGENT (Offline)");
+      }
+    };
+    
+    fetchModelName();
+    // Refresh every minute
+    const interval = setInterval(fetchModelName, 60000);
+    return () => clearInterval(interval);
+  }, []);
   
   // Auto-refresh logic to sync API messages
   useEffect(() => {
@@ -195,7 +224,7 @@ export default function ChatPage() {
                 <M3Thread 
                   userRoleName="Kori"
                   apiRoleName="Kori-API"
-                  agentRoleName="Qwen3-30B"
+                  agentRoleName={agentName}
                 />
               </div>
             </div>
@@ -217,7 +246,7 @@ export default function ChatPage() {
                   <M3Thread 
                     userRoleName="Kori"
                     apiRoleName="Kori-API"
-                    agentRoleName="Qwen3-30B"
+                    agentRoleName={agentName}
                   />
                 </Panel>
               </PanelGroup>

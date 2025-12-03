@@ -11,7 +11,7 @@ type Translations = {
 const translations: Translations = {
   zh: {
     'app.title': 'M3 AGENT // 指挥中心',
-    'app.subtitle': 'Cyber-Tactical Command Interface v3.5',
+    'app.subtitle': 'Cyber-Tactical Command Interface v2.0.0',
     'status.online': '系统在线。等待指令。',
     'status.sync': '同步',
     'action.reset_memory': '重置记忆',
@@ -26,7 +26,7 @@ const translations: Translations = {
   },
   en: {
     'app.title': 'M3 AGENT // COMMAND CENTER',
-    'app.subtitle': 'Cyber-Tactical Command Interface v3.5',
+    'app.subtitle': 'Cyber-Tactical Command Interface v2.0.0',
     'status.online': 'System Online. Awaiting Orders.',
     'status.sync': 'SYNC',
     'action.reset_memory': 'Reset Memory',

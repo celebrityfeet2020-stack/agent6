@@ -262,7 +262,7 @@ class OpenAIModelsResponse(BaseModel):
 @app.get("/")
 async def root():
     return {
-        "status": "M3 Agent System v5.1.0 Running",
+        "status": "M3 Agent System v5.2.0 Running",
         "tools": len(tools),
         "features": ["Agent Workflow", "Tool Calling", "OpenAI Compatible"]
     }

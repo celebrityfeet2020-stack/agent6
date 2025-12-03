@@ -367,7 +367,7 @@ async def activate_prompt(prompt_id: str):
 if __name__ == "__main__":
     import uvicorn
     # 从环境变量读取端口，默认8002
-    admin_port = int(os.getenv("ADMIN_PORT", "8002"))
+    admin_port = int(os.getenv("ADMIN_PORT", "8889"))
     print(f"[Admin Panel] Starting on port {admin_port}")
     uvicorn.run(
         admin_app,
