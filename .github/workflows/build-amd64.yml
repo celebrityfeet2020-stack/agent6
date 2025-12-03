@@ -1,15 +1,9 @@
-name: Build and Push AMD64 Docker Image (v3.7.0)
+name: Build and Push AMD64 Docker Image
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/build-amd64.yml'
-      - 'Dockerfile'
-      - 'requirements.txt'
-      - 'app/**'
-      - 'config/**'
+    tags:
+      - 'v*.*.*'  # 仅在推送版本tag时触发（如v3.8.0）
 
 jobs:
   build-amd64:
@@ -29,6 +23,14 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          # 从tag中提取版本号（去掉v前缀）
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Maximize disk space (Free up ~50GB)
         run: |
@@ -95,7 +97,7 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            junpeng999/agent-system:v3.7.0-amd64
+            junpeng999/agent-system:${{ steps.version.outputs.tag }}-amd64
             junpeng999/agent-system:latest-amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -106,7 +108,7 @@ jobs:
           docker run -d --name agent-test \
             -p 8000:8000 \
             -e OPENAI_API_KEY="test-key" \
-            junpeng999/agent-system:v3.7.0-amd64
+            junpeng999/agent-system:${{ steps.version.outputs.tag }}-amd64
           
           echo "=== Waiting for container to be ready ==="
           sleep 30

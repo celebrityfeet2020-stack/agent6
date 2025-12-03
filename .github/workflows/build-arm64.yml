@@ -1,12 +1,9 @@
-name: Build and Push ARM64 Docker Image (v3.7.0)
+name: Build and Push ARM64 Docker Image
 
 on:
   push:
-    branches:
-      - main
-    paths-ignore:
-      - '**.md'
-      - '.github/workflows/build-amd64.yml'
+    tags:
+      - 'v*.*.*'  # 仅在推送版本tag时触发（如v3.8.0）
 
 jobs:
   build-arm64:
@@ -26,6 +23,14 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          # 从tag中提取版本号（去掉v前缀）
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Maximize disk space (Free up ~50GB)
         run: |
@@ -85,7 +90,7 @@ jobs:
           echo "=== 清理后磁盘空间 ==="
           df -h
 
-      - name: Build and push ARM64 Docker image (v3.7.0)
+      - name: Build and push ARM64 Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -93,7 +98,7 @@ jobs:
           push: true
           tags: |
             junpeng999/agent-system:latest
-            junpeng999/agent-system:v3.7.0
-            junpeng999/agent-system:v3.7.0-arm64
+            junpeng999/agent-system:${{ steps.version.outputs.tag }}
+            junpeng999/agent-system:${{ steps.version.outputs.tag }}-arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
