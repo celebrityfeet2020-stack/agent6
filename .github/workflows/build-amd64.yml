@@ -95,7 +95,7 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            junpeng999/m3-agent-system:v3.1-amd64
+            junpeng999/m3-agent-system:v3.2-amd64
             junpeng999/m3-agent-system:latest-amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -106,7 +106,7 @@ jobs:
           docker run -d --name m3-test \
             -p 8000:8000 \
             -e OPENAI_API_KEY="test-key" \
-            junpeng999/m3-agent-system:v3.1-amd64
+            junpeng999/m3-agent-system:v3.2-amd64
           
           echo "=== Waiting for container to be ready ==="
           sleep 30
