@@ -29,9 +29,9 @@ import os
 # ============================================
 
 app = FastAPI(
-    title="M3 Agent System",
-    version="3.1.0",
-    description="完整的 AI Agent 系统，支持工具调用、RPA自动化和多轮对话"
+    title="Agent System",
+    version="3.6.0",
+    description="完整的 AI Agent 系统，支持SSE流式输出、工具调用、RPA自动化和多轮对话"
 )
 
 app.add_middleware(

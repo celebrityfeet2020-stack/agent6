@@ -7,9 +7,10 @@ import uuid
 import logging
 from typing import Optional, Dict, Any, AsyncGenerator
 from datetime import datetime
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Header
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from app.api.streaming import stream_agent_response
 
 logger = logging.getLogger(__name__)
 
@@ -169,7 +170,8 @@ async def delete_thread_endpoint(assistant_id: str, thread_id: str):
 async def stream_run_endpoint(
     assistant_id: str,
     thread_id: str,
-    request: RunRequest
+    request: RunRequest,
+    x_client_id: Optional[str] = Header(None)
 ):
     """
     流式运行Agent（核心端点）
@@ -192,7 +194,7 @@ async def stream_run_endpoint(
     logger.info(f"Starting stream run for thread {thread_id}, input: {user_message[:50]}...")
     
     # 创建流式响应
-    async def generate_stream() -> AsyncGenerator[str, None]:
+    async def generate_stream(client_id: Optional[str] = None) -> AsyncGenerator[str, None]:
         """生成流式响应"""
         try:
             # 导入Agent（延迟导入避免循环依赖）
@@ -210,39 +212,23 @@ async def stream_run_endpoint(
                 **request.config
             }
             
-            # 流式执行Agent
-            async for chunk in app_graph.astream(input_data, config=run_config):
-                # 调试日志
-                logger.debug(f"Stream chunk: {chunk}")
-                
-                # 格式化为LangGraph标准格式
-                formatted_chunk = format_langgraph_chunk(chunk)
-                if formatted_chunk:
-                    yield f"data: {formatted_chunk}\n\n"
-                else:
-                    # 即使没有格式化成功，也输出原始数据供调试
-                    import json
-                    try:
-                        raw_data = json.dumps({"type": "raw", "data": str(chunk)})
-                        yield f"data: {raw_data}\n\n"
-                    except:
-                        pass
-            
-            # 发送结束标记
-            yield "data: [DONE]\n\n"
-            
-            logger.info(f"Stream run completed for thread {thread_id}")
+            # 使用增强的SSE流式输出
+            async for event in stream_agent_response(
+                app_graph=app_graph,
+                input_data=input_data,
+                config=run_config,
+                thread_id=thread_id,
+                client_id=client_id
+            ):
+                yield event
             
         except Exception as e:
             logger.error(f"Stream run error: {e}", exc_info=True)
-            error_chunk = {
-                "type": "error",
-                "error": str(e)
-            }
-            yield f"data: {error_chunk}\n\n"
+            from app.api.streaming import SSEEventFormatter
+            yield SSEEventFormatter.format_system_log("error", f"Stream error: {str(e)}")
     
     return StreamingResponse(
-        generate_stream(),
+        generate_stream(client_id=x_client_id),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

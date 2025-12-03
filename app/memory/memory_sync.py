@@ -82,21 +82,41 @@ def init_database():
 def add_memory(
     memory_type: str,
     content: str,
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None,
+    source: str = "agent",
+    interface: str = "http_api",
+    client_id: Optional[str] = None,
+    thread_id: Optional[str] = None
 ):
     """
-    添加记忆到缓冲区
+    添加记忆到缓冲区（v3.6增强版）
     
     Args:
         memory_type: 记忆类型 (operation_log, thinking_chain, dialogue, system_log)
         content: 记忆内容
         metadata: 元数据
+        source: 消息来源 (user, api, agent)
+        interface: 接口类型 (http_api, sse_api, websocket)
+        client_id: 客户端唯一标识
+        thread_id: 对话线程ID
     """
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        metadata_json = json.dumps(metadata) if metadata else None
+        # 构建完整的metadata（v3.6增强）
+        import os
+        enhanced_metadata = metadata.copy() if metadata else {}
+        enhanced_metadata.update({
+            "source": source,
+            "interface": interface,
+            "client_id": client_id,
+            "thread_id": thread_id,
+            "agent_id": os.getenv("AGENT_ID", "unknown"),
+            "timestamp": datetime.utcnow().isoformat()
+        })
+        
+        metadata_json = json.dumps(enhanced_metadata)
         
         cursor.execute("""
             INSERT INTO memory_buffer (type, content, metadata)

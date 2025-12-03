@@ -37,7 +37,7 @@ services:
 
   # Agent System API
   agent-system-api:
-    image: agent-system:v3.6.0-beta
+    image: agent-system:v3.6.0
     container_name: agent-system-api
     build:
       context: .
