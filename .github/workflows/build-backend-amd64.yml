@@ -2,13 +2,8 @@ name: Build Backend AMD64
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*-amd64'
-    paths:
-      - 'backend/**'
-      - '.github/workflows/build-backend-amd64.yml'
 
 jobs:
   build-and-push:

@@ -2,13 +2,8 @@ name: Build Backend ARM64
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*-arm64'
-    paths:
-      - 'backend/**'
-      - '.github/workflows/build-backend-arm64.yml'
 
 jobs:
   build-and-push:
