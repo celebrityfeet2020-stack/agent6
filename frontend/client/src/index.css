@@ -1,0 +1,223 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  /* Light mode (Fallback, though we default to dark) */
+  --primary: oklch(0.4 0.1 260); /* Deep Blue */
+  --primary-foreground: oklch(0.98 0 0);
+  --background: oklch(0.98 0 0);
+  --foreground: oklch(0.2 0.02 260);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.02 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.02 260);
+  --secondary: oklch(0.95 0.02 260);
+  --secondary-foreground: oklch(0.2 0.02 260);
+  --muted: oklch(0.95 0.02 260);
+  --muted-foreground: oklch(0.5 0.02 260);
+  --accent: oklch(0.95 0.02 260);
+  --accent-foreground: oklch(0.2 0.02 260);
+  --destructive: oklch(0.6 0.2 20);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.9 0.02 260);
+  --input: oklch(0.9 0.02 260);
+  --ring: oklch(0.4 0.1 260);
+  --radius: 0.5rem;
+}
+
+.dark {
+  /* Cyber-Tactical Dark Mode (Eye-Protection Optimized) */
+  
+  /* Background: Deep Obsidian (Not pure black, slightly blue-tinted) */
+  --background: oklch(0.12 0.02 260); 
+  
+  /* Foreground: Soft White (Not harsh white) */
+  --foreground: oklch(0.9 0.01 260);
+  
+  /* Primary: Muted Electric Blue (Used for accents, not backgrounds) */
+  --primary: oklch(0.6 0.15 250);
+  --primary-foreground: oklch(0.12 0.02 260);
+  
+  /* Card/Bubble Backgrounds: Slightly lighter than background */
+  --card: oklch(0.16 0.03 260);
+  --card-foreground: oklch(0.9 0.01 260);
+  
+  /* Popovers */
+  --popover: oklch(0.16 0.03 260);
+  --popover-foreground: oklch(0.9 0.01 260);
+  
+  /* Secondary: Dark Gunmetal (Used for user bubbles) */
+  --secondary: oklch(0.25 0.04 260);
+  --secondary-foreground: oklch(0.95 0.01 260);
+  
+  /* Muted: Low contrast text */
+  --muted: oklch(0.2 0.03 260);
+  --muted-foreground: oklch(0.6 0.02 260);
+  
+  /* Accent: Hover states */
+  --accent: oklch(0.25 0.04 260);
+  --accent-foreground: oklch(0.95 0.01 260);
+  
+  /* Destructive */
+  --destructive: oklch(0.4 0.15 20);
+  --destructive-foreground: oklch(0.9 0.01 260);
+  
+  /* Borders: Very subtle */
+  --border: oklch(0.25 0.03 260);
+  --input: oklch(0.25 0.03 260);
+  --ring: oklch(0.4 0.1 260);
+  
+  /* Charts */
+  --chart-1: oklch(0.6 0.15 250);
+  --chart-2: oklch(0.5 0.15 250);
+  --chart-3: oklch(0.4 0.15 250);
+  --chart-4: oklch(0.3 0.15 250);
+  --chart-5: oklch(0.2 0.15 250);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  
+  /* v1.9: Font optimization based on Manus design */
+  html {
+    font-size: 16px; /* Increased from default 14px */
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.7; /* Increased from default 1.5 */
+  }
+  
+  /* Headings - larger and bolder */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  
+  h1 { font-size: 22px; }
+  h2 { font-size: 20px; }
+  h3 { font-size: 18px; }
+  h4 { font-size: 16px; }
+  
+  /* Paragraphs - better spacing */
+  p {
+    margin-bottom: 12px;
+  }
+  
+  /* Lists - better spacing */
+  ul, ol {
+    margin-bottom: 16px;
+    padding-left: 24px;
+  }
+  
+  li {
+    margin-bottom: 8px;
+    line-height: 1.6;
+  }
+  
+  /* Code blocks - monospace font */
+  code, pre {
+    font-family: "SF Mono", "Monaco", "Cascadia Code", "Consolas", "Courier New", monospace;
+    font-size: 14px;
+  }
+  
+  /* Strong text */
+  strong, b {
+    font-weight: 600;
+  }
+  
+  /* Small text */
+  small {
+    font-size: 13px;
+  }
+}
+
+@layer components {
+  /* v1.9: Override Tailwind font sizes to match body baseline */
+  .text-sm {
+    font-size: 15px !important; /* Match body font size */
+  }
+  
+  .text-base {
+    font-size: 15px !important;
+  }
+  
+  .text-xs {
+    font-size: 13px !important; /* Slightly smaller for metadata */
+  }
+  
+  /* v1.9: Increased padding for better readability */
+  .container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1.5rem; /* Increased from 1rem */
+    padding-right: 1.5rem;
+  }
+
+  .flex {
+    min-height: 0;
+    min-width: 0;
+  }
+
+  @media (min-width: 640px) {
+    .container {
+      padding-left: 2rem; /* Increased from 1.5rem */
+      padding-right: 2rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container {
+      padding-left: 2.5rem; /* Increased from 2rem */
+      padding-right: 2.5rem;
+      max-width: 1280px;
+    }
+  }
+}

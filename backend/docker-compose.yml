@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16
+    container_name: m3-postgres
+    environment:
+      POSTGRES_DB: langgraph_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-uuT05m8KTSkTZwojke8g}
+    volumes:
+      - m3_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: m3-redis
+    volumes:
+      - m3_redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Agent System API
+  agent-system-api:
+    image: agent-system:v3.7.0
+    container_name: agent-system-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      # LLM Configuration
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://192.168.9.125:8000/v1}
+      LLM_MODEL: ${LLM_MODEL:-minimax/minimax-m2}
+      LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0.7}
+      LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-4096}
+      
+      # Database
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-uuT05m8KTSkTZwojke8g}@postgres:5432/langgraph_db
+      
+      # Redis
+      REDIS_URL: redis://redis:6379/0
+      
+      # API Configuration
+      API_HOST: 0.0.0.0
+      API_PORT: 8001
+      ADMIN_PORT: 8002
+      
+      # Docker Socket (for code execution)
+      DOCKER_HOST: unix:///var/run/docker.sock
+      
+      # Browser Configuration
+      BROWSER_HEADLESS: ${BROWSER_HEADLESS:-false}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - m3_logs:/var/log
+      - m3_data:/app/data
+      - m3_uploads:/app/uploads
+      - m3_easyocr:/root/.EasyOCR
+    ports:
+      - "8888:8000"  # Agent API
+      - "8889:8002"  # Admin Panel
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+volumes:
+  m3_postgres_data:
+    name: m3_postgres_data
+  m3_redis_data:
+    name: m3_redis_data
+  m3_logs:
+    name: m3_logs
+  m3_data:
+    name: m3_data
+  m3_uploads:
+    name: m3_uploads
+  m3_easyocr:
+    name: m3_easyocr
+
+networks:
+  default:
+    name: m3_network
