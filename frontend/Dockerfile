@@ -6,16 +6,12 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+# Copy all project files (simpler and more reliable)
+COPY . .
 
 # Install pnpm and dependencies
 RUN npm install -g pnpm@9.15.0 && \
     pnpm install --frozen-lockfile
-
-# Copy source code (entire project structure)
-COPY client ./client
-COPY vite.config.ts tsconfig.json ./
 
 # Build the application
 RUN pnpm run build
