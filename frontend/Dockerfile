@@ -13,8 +13,9 @@ COPY package.json pnpm-lock.yaml ./
 RUN npm install -g pnpm@9.15.0 && \
     pnpm install --frozen-lockfile
 
-# Copy source code
-COPY . .
+# Copy source code (entire project structure)
+COPY client ./client
+COPY vite.config.ts tsconfig.json ./
 
 # Build the application
 RUN pnpm run build
@@ -22,8 +23,8 @@ RUN pnpm run build
 # Stage 2: Production
 FROM nginx:1.27-alpine
 
-# Copy built files from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Copy built files from builder stage (dist/public as per vite.config.ts)
+COPY --from=builder /app/dist/public /usr/share/nginx/html
 
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
