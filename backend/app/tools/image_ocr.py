@@ -4,6 +4,7 @@ import easyocr
 import pytesseract
 from PIL import Image
 import os
+from app.core.tool_pool import tool_pool
 
 class ImageOCRTool(BaseTool):
     name: str = "image_ocr"
@@ -15,15 +16,21 @@ class ImageOCRTool(BaseTool):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.reader = easyocr.Reader(['en', 'ch_sim'])
+        # v5.7: Use global tool pool instead of creating new reader
+        # self.reader = easyocr.Reader(['en', 'ch_sim'])  # Old: 10s loading time
+        self.reader = None  # Will use tool_pool.get_ocr_reader()
     
     def _run(self, image_path: str) -> str:
         try:
             if not os.path.exists(image_path):
                 return f"Image file not found: {image_path}"
             
-            # Try EasyOCR first
-            result = self.reader.readtext(image_path)
+            # v5.7: Use pre-loaded OCR reader from tool pool
+            reader = tool_pool.get_ocr_reader()
+            if reader is None:
+                return "Error: OCR reader not available"
+            
+            result = reader.readtext(image_path)
             text_easy = "\n".join([item[1] for item in result])
             
             # Also try Tesseract

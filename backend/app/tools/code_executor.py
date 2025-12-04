@@ -1,8 +1,9 @@
-"""Code Executor Tool - Execute code in Docker sandbox"""
+"""Code Executor Tool - Secure Python Sandbox"""
 from langchain_core.tools import BaseTool
 import docker
 import tempfile
 import os
+from app.core.tool_pool import tool_pool
 
 class CodeExecutorTool(BaseTool):
     name: str = "code_executor"
@@ -12,7 +13,11 @@ class CodeExecutorTool(BaseTool):
     
     def _run(self, code: str) -> str:
         try:
-            client = docker.from_env()
+            # v5.7: Use pre-loaded Docker client from tool pool
+            client = tool_pool.get_docker_client()
+            if client is None:
+                # Fallback to creating new client
+                client = docker.from_env()
             with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
                 f.write(code)
                 temp_file = f.name
