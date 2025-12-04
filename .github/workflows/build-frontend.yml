@@ -31,7 +31,13 @@ jobs:
         id: version
         run: |
           if [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            VERSION=${GITHUB_REF#refs/tags/ui-v}
+            TAG=${GITHUB_REF#refs/tags/}
+            # Support both ui-v* and frontend-v* formats
+            if [[ "$TAG" == frontend-v* ]]; then
+              VERSION=${TAG#frontend-v}
+            else
+              VERSION=${TAG#ui-v}
+            fi
           else
             VERSION="2.2"
           fi
