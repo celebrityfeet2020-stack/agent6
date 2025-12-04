@@ -1,14 +1,13 @@
 """
-M3 Agent System v5.7 - Admin Panel
+M3 Agent System v5.7.1 - Admin Panel
 独立运行在端口 8002，提供管理界面和 API
-v5.7更新：工具池，预加载所有重量级资源，工具调用速度提升10-20倍
+v5.7.1更新：线程池浏览器+工具池，保留uvloop性能，工具调用速度提升10-20倍
 v5.6更新：修复性能监控定时任务，保持任务引用防止被垃圾回收
 v5.5更新：基于v5.2稳定版本，实现三角聊天室，WebSocket实时推送，优化前后端联通
 """
 
-# v5.6: Apply nest_asyncio globally to fix event loop conflicts
-import nest_asyncio
-nest_asyncio.apply()
+# v5.7.1: Browser pool uses thread pool (no need for nest_asyncio)
+# Removed nest_asyncio to preserve uvloop performance
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -36,7 +35,7 @@ from app.performance.performance_monitor import (
 
 admin_app = FastAPI(
     title="M3 Agent Admin Panel",
-    version="5.7"
+    version="5.7.1"
 )
 
 admin_app.add_middleware(
@@ -379,11 +378,11 @@ if __name__ == "__main__":
     # 从环境变量读取端口，默认8002
     admin_port = int(os.getenv("ADMIN_PORT", "8002"))
     print(f"[Admin Panel] Starting on port {admin_port}")
-    # v5.7: Force asyncio loop (disable uvloop) to fix nest_asyncio compatibility
+    # v5.7.1: Use default uvloop for performance
     uvicorn.run(
         admin_app,
         host="0.0.0.0",
         port=admin_port,
-        log_level="info",
-        loop="asyncio"  # Disable uvloop, use standard asyncio
+        log_level="info"
+        # No loop="asyncio" - let uvicorn use uvloop by default
     )

@@ -1,5 +1,5 @@
 """FastAPI Backend for M3 Agent System
-M3 Agent System v5.7 - Main Application
+M3 Agent System v5.7.1 - Main Application
 重大性能优化：全局浏览器池 + 模型预加载
 完整的 Agent 工作流，支持工具调用和 OpenAI 兼容接口
 
@@ -30,10 +30,9 @@ v5.6 Critical Fixes:
 - Updated version to v5.6
 """
 
-# v5.7: Tool pool for pre-loading heavy resources
-# v5.6: Apply nest_asyncio globally to fix event loop conflicts
-import nest_asyncio
-nest_asyncio.apply()
+# v5.7.1: Tool pool for pre-loading heavy resources
+# v5.7.1: Browser pool uses thread pool (no need for nest_asyncio)
+# Removed nest_asyncio to preserve uvloop performance
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -65,8 +64,8 @@ from app.websocket_manager import manager as ws_manager
 
 app = FastAPI(
     title="Agent System",
-    version="5.7",
-    description="M3 Agent v5.7 - Tool Pool: Pre-load all heavy resources (OCR, Docker, etc.) for 10-20x faster tool calls. 工具池：预加载所有重量级资源，工具调用速度提升10-20倍。支持SSE流式输出、工具调用、RPA自动化、多轮对话和性能监控"
+    version="5.7.1",
+    description="M3 Agent v5.7.1 - Tool Pool + Thread Pool Browser: Pre-load all heavy resources, preserve uvloop performance. 工具池+线程池浏览器：预加载所有资源，保留uvloop性能。支持SSE流式输出、工具调用、RPA自动化、多轮对话和性能监控"
 )
 
 app.add_middleware(
@@ -304,7 +303,7 @@ class OpenAIModelsResponse(BaseModel):
 @app.get("/")
 async def root():
     return {
-        "status": "M3 Agent System v5.7.0 Running",
+        "status": "M3 Agent System v5.7.1 Running",
         "tools": len(tools),
         "features": ["Agent Workflow", "Tool Calling", "OpenAI Compatible"]
     }
@@ -726,11 +725,11 @@ logger.info("✓ Shutdown hooks registered (memory sync + browser pool + tool po
 
 if __name__ == "__main__":
     import uvicorn
-    # v5.7: Force asyncio loop (disable uvloop) to fix nest_asyncio compatibility
+    # v5.7.1: Use default uvloop for performance (browser pool uses thread pool)
     uvicorn.run(
         app,
         host=settings.API_HOST,
         port=settings.API_PORT,
-        log_level="info",
-        loop="asyncio"  # Disable uvloop, use standard asyncio
+        log_level="info"
+        # No loop="asyncio" - let uvicorn use uvloop by default
     )
