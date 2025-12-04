@@ -67,9 +67,11 @@ class BrowserAutomationTool(BaseTool):
             else:
                 result = f"Unknown action: {action}"
             
-            return result
+            # v5.8: 确保返回非空结果
+            return result if result else "(Action completed, no output)"
             
         except Exception as e:
+            logger.error(f"Browser automation error: {e}", exc_info=True)
             return f"Browser automation error: {str(e)}"
         
         finally:

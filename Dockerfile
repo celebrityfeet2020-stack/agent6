@@ -1,4 +1,4 @@
-# Agent System v3.6.0-beta - Fixed admin panel port mapping and system renaming
+# M3 Agent System v5.8.0 - Enhanced Tool Pool + Thought Chain + Triangle Chat Room
 # Base Image: Playwright (includes Chromium, Firefox, WebKit)
 # This avoids browser compatibility issues
 

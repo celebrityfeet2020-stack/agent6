@@ -55,25 +55,34 @@ class SpeechRecognitionTool(BaseTool):
     """
     args_schema: Type[BaseModel] = SpeechRecognitionInput
     
-    def __init__(self, preload_model: bool = True, model_size: str = "small"):
+    def __init__(self, preload_model: bool = True, model_size: str = "medium"):
         super().__init__()
         self._whisper_model = None
-        self._model_size = model_size  # Default model size (pre-installed in v2.7)
+        self._model_size = model_size  # Default model size (changed to medium in v5.8)
         
-        # v5.0: Pre-load Whisper model at initialization
-        if preload_model:
-            try:
-                self._load_model(model_size)
-                logger.info(f"✅ Whisper model '{model_size}' pre-loaded (v5.0)")
-            except Exception as e:
-                logger.warning(f"Failed to pre-load Whisper model: {e}. Will load on first use.")
+        # v5.8: Use global tool pool for Whisper model (no need to pre-load here)
+        # The tool pool will pre-load Whisper model at startup
+        logger.info(f"✅ SpeechRecognitionTool initialized (will use global tool pool)")
     
-    def _load_model(self, model_size: str = "small"):
-        """Load Whisper model (lazy loading)."""
+    def _load_model(self, model_size: str = "medium"):
+        """Load Whisper model (v5.8: use global tool pool first)."""
+        # v5.8: Try to get from global tool pool first
+        try:
+            from app.core.tool_pool_v5_8 import enhanced_tool_pool
+            model = enhanced_tool_pool.get_whisper_model()
+            if model is not None:
+                logger.info("✅ Using Whisper model from global tool pool")
+                self._whisper_model = model
+                self._model_size = "medium"  # Tool pool uses medium model
+                return self._whisper_model
+        except Exception as e:
+            logger.warning(f"Failed to get Whisper from tool pool: {e}")
+        
+        # Fallback: Load model on demand
         if self._whisper_model is None or self._model_size != model_size:
             try:
                 import whisper
-                logger.info(f"Loading Whisper model: {model_size}")
+                logger.info(f"Loading Whisper model on demand: {model_size}")
                 self._whisper_model = whisper.load_model(model_size)
                 self._model_size = model_size
                 logger.info(f"Whisper model {model_size} loaded successfully")

@@ -4,7 +4,12 @@ import easyocr
 import pytesseract
 from PIL import Image
 import os
-from app.core.tool_pool import tool_pool
+# v5.8: Use enhanced tool pool
+try:
+    from app.core.tool_pool_v5_8 import enhanced_tool_pool as tool_pool
+except ImportError:
+    # Fallback to v5.7 tool pool
+    from app.core.tool_pool import tool_pool
 
 class ImageOCRTool(BaseTool):
     name: str = "image_ocr"
@@ -16,9 +21,9 @@ class ImageOCRTool(BaseTool):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # v5.7: Use global tool pool instead of creating new reader
+        # v5.8: Use global enhanced tool pool instead of creating new reader
         # self.reader = easyocr.Reader(['en', 'ch_sim'])  # Old: 10s loading time
-        self.reader = None  # Will use tool_pool.get_ocr_reader()
+        self.reader = None  # Will use enhanced_tool_pool.get_ocr_reader()
     
     def _run(self, image_path: str) -> str:
         try:

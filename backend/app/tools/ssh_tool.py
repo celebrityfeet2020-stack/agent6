@@ -26,9 +26,15 @@ class SSHTool(BaseTool):
             
             client.close()
             
-            result = f"=== Output ===\n{output}"
-            if error:
-                result += f"\n=== Error ===\n{error}"
+            # v5.8: 修复空响应问题
+            if not output and not error:
+                result = "(Command executed successfully, no output)"
+            elif output and not error:
+                result = f"=== Output ===\n{output}"
+            elif error and not output:
+                result = f"=== Error ===\n{error}"
+            else:
+                result = f"=== Output ===\n{output}\n=== Error ===\n{error}"
             
             return result
         except Exception as e:

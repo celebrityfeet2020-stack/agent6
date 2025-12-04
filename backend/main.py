@@ -64,8 +64,8 @@ from app.websocket_manager import manager as ws_manager
 
 app = FastAPI(
     title="Agent System",
-    version="5.7.1",
-    description="M3 Agent v5.7.1 - Tool Pool + Thread Pool Browser: Pre-load all heavy resources, preserve uvloop performance. 工具池+线程池浏览器：预加载所有资源，保留uvloop性能。支持SSE流式输出、工具调用、RPA自动化、多轮对话和性能监控"
+    version="5.8.0",
+    description="M3 Agent v5.8 - Enhanced Tool Pool: Pre-load ALL tools (OCR+Whisper+CV+Docker) into 512GB memory. 增强版工具池：预加载所有工具到内存。支持思维链+工具链、三角聊天室、SSE流式输出、工具调用、RPA自动化、多轮对话和性能监控"
 )
 
 app.add_middleware(
@@ -101,9 +101,15 @@ async def startup_event():
     global browser_pool, tools, llm_with_tools, app_graph
     from app.core.startup import initialize_browser_pool_and_tools
     
-    # v5.7: Initialize tool pool (pre-load heavy resources)
-    logger.info("Initializing tool pool...")
-    await tool_pool.initialize()
+    # v5.8: Initialize enhanced tool pool (pre-load ALL heavy resources)
+    logger.info("Initializing enhanced tool pool (v5.8)...")
+    try:
+        from app.core.tool_pool_v5_8 import enhanced_tool_pool
+        await enhanced_tool_pool.initialize()
+    except Exception as e:
+        logger.warning(f"Failed to initialize v5.8 tool pool: {e}")
+        logger.warning("Falling back to v5.7 tool pool...")
+        await tool_pool.initialize()
     
     # Initialize browser pool and tools
     browser_pool, tools = await initialize_browser_pool_and_tools()
@@ -139,6 +145,14 @@ app.include_router(fleet_router)
 # 注册LangGraph API路由（用于assistant-ui等客户端）
 from app.api.langgraph_adapter import router as langgraph_router
 app.include_router(langgraph_router)
+
+# v5.8: 注册Streaming API路由（思维链 + 工具链）
+from app.api.streaming import router as streaming_router
+app.include_router(streaming_router)
+
+# v5.8: 注册三角聊天室API路由（人在回路监督）
+from app.api.chat_room import router as chat_room_router
+app.include_router(chat_room_router)
 
 # ============================================
 # Initialize LLM and Tools

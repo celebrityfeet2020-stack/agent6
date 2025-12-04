@@ -1,6 +1,6 @@
 # M3 Agent System - Triangle Chat Room Edition
 
-**Version:** Backend v5.5 | Frontend v2.2
+**Version:** Backend v5.8.0 | Frontend v2.2
 
 ## 项目概述
 
@@ -17,7 +17,7 @@ M3 Agent System 是一个集成了 LangGraph、FastAPI 和 React 的智能代理
 
 ## 技术栈
 
-### 后端 (v5.5)
+### 后端 (v5.8.0)
 - **框架**：Python 3.11 + FastAPI + LangGraph
 - **数据库**：SQLite (memory_buffer.db)
 - **通信**：WebSocket + SSE streaming
@@ -34,7 +34,7 @@ M3 Agent System 是一个集成了 LangGraph、FastAPI 和 React 的智能代理
 
 ```
 m3-agent-system-repo/
-├── backend/                    # 后端代码 (v5.5)
+├── backend/                    # 后端代码 (v5.8.0)
 │   ├── app/
 │   │   ├── main.py            # FastAPI 主应用
 │   │   ├── websocket_manager.py  # WebSocket 连接管理
@@ -45,7 +45,7 @@ m3-agent-system-repo/
 │   ├── config/                # 配置文件
 │   ├── Dockerfile             # Docker 构建文件
 │   ├── requirements.txt       # Python 依赖
-│   └── TECH_REPORT_v5.5.md   # 技术文档
+│   └── TECH_REPORT_v5.8.md   # 技术文档
 ├── frontend/                   # 前端代码 (v2.2)
 │   ├── client/
 │   │   └── src/
@@ -76,12 +76,12 @@ git clone https://github.com/junpeng999/m3-agent-system.git
 cd m3-agent-system
 ```
 
-### 2. 部署后端 (v5.5)
+### 2. 部署后端 (v5.8.0)
 
 ```bash
 # ARM64 架构（如 Apple Silicon、树莓派）
-docker pull junpeng999/agent-system:v5.5-arm64
-docker run -d -p 8888:8001 --name m3-backend junpeng999/agent-system:v5.5-arm64
+docker pull junpeng999/agent-system:v5.8.0-arm64
+docker run -d -p 8888:8001 --name m3-backend junpeng999/agent-system:v5.8.0-arm64
 
 # AMD64 架构（如 Intel/AMD 服务器）
 docker pull junpeng999/agent-system:v5.5-amd64

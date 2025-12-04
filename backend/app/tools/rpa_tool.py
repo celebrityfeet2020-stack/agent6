@@ -106,9 +106,11 @@ class RPATool(BaseTool):
             )
             
             if result.returncode == 0:
+                # v5.8: 修复空响应问题
+                output = result.stdout.strip()
                 return {
                     "success": True,
-                    "output": result.stdout.strip()
+                    "output": output if output else "(Command executed successfully, no output)"
                 }
             else:
                 return {
