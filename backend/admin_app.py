@@ -1,8 +1,13 @@
 """
-M3 Agent System v5.5 - Admin Panel
+M3 Agent System v5.6 - Admin Panel
 独立运行在端口 8002，提供管理界面和 API
+v5.6更新：修复性能监控定时任务，保持任务引用防止被垃圾回收
 v5.5更新：基于v5.2稳定版本，实现三角聊天室，WebSocket实时推送，优化前后端联通
 """
+
+# v5.6: Apply nest_asyncio globally to fix event loop conflicts
+import nest_asyncio
+nest_asyncio.apply()
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,7 +35,7 @@ from app.performance.performance_monitor import (
 
 admin_app = FastAPI(
     title="M3 Agent Admin Panel",
-    version="5.5"
+    version="5.6"
 )
 
 admin_app.add_middleware(
@@ -48,15 +53,19 @@ templates = Jinja2Templates(directory="/app/admin_ui/templates")
 # Startup Event
 # ============================================
 
+# v5.6: Keep task reference to prevent garbage collection
+_monitor_task = None
+
 @admin_app.on_event("startup")
 async def startup_event():
     """启动时初始化性能监控"""
+    global _monitor_task
     print("[Admin Panel] Initializing performance monitoring...")
     # 立即更新一次性能数据
     await update_performance_cache()
-    # 启动后台监控任务
-    asyncio.create_task(performance_monitor_loop())
-    print("[Admin Panel] Performance monitoring started")
+    # 启动后台监控任务（保持引用防止被垃圾回收）
+    _monitor_task = asyncio.create_task(performance_monitor_loop())
+    print("[Admin Panel] Performance monitoring started (task reference kept)")
 
 # ============================================
 # Pydantic Models

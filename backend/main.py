@@ -17,9 +17,19 @@ v5.0 Performance Improvements:
 - Browser Pool: 90% faster Playwright operations (5-10s → 0.5-1s)
 - Model Pre-loading: 60% faster first-time model usage
 - Memory optimization: Shared browser instances across tools
+
+v5.6 Critical Fixes:
+- Fixed event loop conflict with nest_asyncio (browser pool now works)
+- Fixed performance monitoring task lifecycle (保持任务引用)
+- Added API performance tracking middleware
+- Updated version to v5.6
 """
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+# v5.6: Apply nest_asyncio globally to fix event loop conflicts
+import nest_asyncio
+nest_asyncio.apply()
+
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -49,8 +59,8 @@ from app.websocket_manager import manager as ws_manager
 
 app = FastAPI(
     title="Agent System",
-    version="5.5",
-    description="M3 Agent v5.1 - Bug Fix: Event loop conflict + nginx config. 重大性能优化：全局浏览器池+模型预加载，极大提升工具使用效率。支持SSE流式输出、工具调用、RPA自动化、多轮对话和性能监控"
+    version="5.6",
+    description="M3 Agent v5.6 - Critical Fixes: Event loop conflict fixed with nest_asyncio, performance monitoring restored, API tracking enabled. 重大性能优化：全局浏览器池+模型预加载，极大提升工具使用效率。支持SSE流式输出、工具调用、RPA自动化、多轮对话和性能监控"
 )
 
 app.add_middleware(
@@ -60,6 +70,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# v5.6: Add API performance tracking middleware
+from app.performance.performance_monitor import record_api_request
+import time
+
+@app.middleware("http")
+async def performance_tracking_middleware(request: Request, call_next):
+    """Track API performance for all requests"""
+    start_time = time.time()
+    try:
+        response = await call_next(request)
+        response_time = (time.time() - start_time) * 1000
+        record_api_request(success=response.status_code < 400, response_time_ms=response_time)
+        return response
+    except Exception as e:
+        response_time = (time.time() - start_time) * 1000
+        record_api_request(success=False, response_time_ms=response_time)
+        raise
 
 # v5.1: Startup event to initialize browser pool, tools, and workflow
 @app.on_event("startup")
@@ -266,7 +294,7 @@ class OpenAIModelsResponse(BaseModel):
 @app.get("/")
 async def root():
     return {
-        "status": "M3 Agent System v5.1.0 Running",
+        "status": "M3 Agent System v5.6.0 Running",
         "tools": len(tools),
         "features": ["Agent Workflow", "Tool Calling", "OpenAI Compatible"]
     }
