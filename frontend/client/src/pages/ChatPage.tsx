@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { NameSettingsDialog, useNameSettings } from "@/components/settings/NameSettings";
 
 // Separate component for Header Actions to access runtime context if needed
 const HeaderActions = ({ isLive, setIsLive, handleManualRefresh }: any) => {
@@ -120,6 +121,7 @@ export default function ChatPage() {
   const [lastSync, setLastSync] = useState<Date>(new Date());
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [showLogsMobile, setShowLogsMobile] = useState(false);
+  const { names } = useNameSettings();
   
   // Auto-refresh logic to sync API messages
   useEffect(() => {
@@ -154,11 +156,14 @@ export default function ChatPage() {
           </div>
           
           <TooltipProvider>
-            <HeaderActions 
-              isLive={isLive} 
-              setIsLive={setIsLive} 
-              handleManualRefresh={handleManualRefresh} 
-            />
+            <div className="flex items-center gap-2">
+              <NameSettingsDialog />
+              <HeaderActions 
+                isLive={isLive} 
+                setIsLive={setIsLive} 
+                handleManualRefresh={handleManualRefresh} 
+              />
+            </div>
           </TooltipProvider>
         </header>
 
@@ -193,9 +198,9 @@ export default function ChatPage() {
               {/* Chat Thread */}
               <div className="flex-1 h-full pt-0">
                 <M3Thread 
-                  userRoleName="Kori"
-                  apiRoleName="Kori-API"
-                  agentRoleName="Qwen3-30B"
+                  userRoleName={names.userRoleName}
+                  apiRoleName={names.apiRoleName}
+                  agentRoleName={names.agentRoleName}
                 />
               </div>
             </div>
@@ -215,9 +220,9 @@ export default function ChatPage() {
                 {/* Middle Panel: Chat Thread */}
                 <Panel defaultSize={60} minSize={30}>
                   <M3Thread 
-                    userRoleName="Kori"
-                    apiRoleName="Kori-API"
-                    agentRoleName="Qwen3-30B"
+                    userRoleName={names.userRoleName}
+                    apiRoleName={names.apiRoleName}
+                    agentRoleName={names.agentRoleName}
                   />
                 </Panel>
               </PanelGroup>
