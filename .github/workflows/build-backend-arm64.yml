@@ -29,7 +29,13 @@ jobs:
         id: version
         run: |
           if [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            VERSION=${GITHUB_REF#refs/tags/v}
+            TAG=${GITHUB_REF#refs/tags/}
+            # Support both v*-arm64 and backend-v*-arm64 formats
+            if [[ "$TAG" == backend-v* ]]; then
+              VERSION=${TAG#backend-v}
+            else
+              VERSION=${TAG#v}
+            fi
             VERSION=${VERSION%-arm64}
           else
             VERSION="5.5"
