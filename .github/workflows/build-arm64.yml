@@ -1,0 +1,104 @@
+name: Build and Push ARM64 Docker Image
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # 仅在推送版本tag时触发（如v3.8.0）
+
+jobs:
+  build-arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          # 从tag中提取版本号（去掉v前缀）
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Maximize disk space (Free up ~50GB)
+        run: |
+          echo "=== 清理前磁盘空间 ==="
+          df -h
+          
+          echo "=== 删除 Android SDK (~30GB) ==="
+          sudo rm -rf /usr/local/lib/android
+          
+          echo "=== 删除 .NET (~2GB) ==="
+          sudo rm -rf /usr/share/dotnet
+          
+          echo "=== 删除 Haskell (~3GB) ==="
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/.ghcup
+          
+          echo "=== 删除 Swift (~2GB) ==="
+          sudo rm -rf /usr/share/swift
+          
+          echo "=== 删除 CodeQL (~5GB) ==="
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          
+          echo "=== 删除 Google Cloud SDK (~1GB) ==="
+          sudo rm -rf /usr/lib/google-cloud-sdk
+          
+          echo "=== 删除 Azure CLI (~1GB) ==="
+          sudo rm -rf /opt/az
+          
+          echo "=== 删除 Boost (~1.5GB) ==="
+          sudo rm -rf /usr/local/share/boost
+          
+          echo "=== 删除 Rust (~2GB) ==="
+          sudo rm -rf /usr/share/rust
+          
+          echo "=== 删除 Go (~1GB) ==="
+          sudo rm -rf /usr/local/go
+          
+          echo "=== 删除 Node.js 多版本 (~2GB) ==="
+          sudo rm -rf /opt/hostedtoolcache/node
+          
+          echo "=== 删除 Python 多版本 (~1GB) ==="
+          sudo rm -rf /opt/hostedtoolcache/Python
+          
+          echo "=== 删除 Ruby (~1GB) ==="
+          sudo rm -rf /opt/hostedtoolcache/Ruby
+          
+          echo "=== 删除 Agent Tools (~2GB) ==="
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          
+          echo "=== 清理 Docker 缓存 ==="
+          docker system prune -af --volumes
+          
+          echo "=== 清理 APT 缓存 ==="
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+          
+          echo "=== 清理后磁盘空间 ==="
+          df -h
+
+      - name: Build and push ARM64 Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: |
+            junpeng999/agent-system:latest
+            junpeng999/agent-system:${{ steps.version.outputs.tag }}
+            junpeng999/agent-system:${{ steps.version.outputs.tag }}-arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
