@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*-arm64'
+      - 'backend-v*-arm64'
 
 jobs:
   build-and-push:

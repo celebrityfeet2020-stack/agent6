@@ -6,6 +6,7 @@ on:
       - main
     tags:
       - 'ui-v*'
+      - 'frontend-v*'
     paths:
       - 'frontend/**'
       - '.github/workflows/build-frontend.yml'

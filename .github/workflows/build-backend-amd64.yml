@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*-amd64'
+      - 'backend-v*-amd64'
 
 jobs:
   build-and-push:
