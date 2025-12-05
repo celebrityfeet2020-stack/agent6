@@ -8,14 +8,17 @@ FROM node:22-alpine AS frontend-builder
 
 WORKDIR /app/chatroom_ui
 
-# 复制前端代码
-COPY chatroom_ui/package.json chatroom_ui/pnpm-lock.yaml* ./
+# 1. 先复制package.json和lock文件 (利用Docker缓存)
+COPY chatroom_ui/package.json chatroom_ui/pnpm-lock.yaml ./
+
+# 2. 安装依赖
+RUN npm install -g pnpm && pnpm install
+
+# 3. 再复制其他源代码
 COPY chatroom_ui/ ./
 
-# 安装pnpm并构建
-RUN npm install -g pnpm && \
-    pnpm install && \
-    pnpm run build
+# 4. 构建
+RUN pnpm run build
 
 # ============================================
 # Stage 2: Python基础镜像 + 系统依赖
