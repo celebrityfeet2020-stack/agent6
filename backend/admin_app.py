@@ -70,6 +70,10 @@ _monitor_task = None
 async def startup_event():
     """启动时初始化性能监控"""
     global _monitor_task
+    # v6.3: 初始化启动时间
+    from dashboard_apis import set_startup_time
+    from datetime import datetime
+    set_startup_time(datetime.now())
     print("[Admin Panel] Initializing performance monitoring...")
     # 立即更新一次性能数据
     await update_performance_cache()
@@ -292,6 +296,38 @@ async def get_status():
     }
 
 # ============================================
+# Dashboard API (v6.3)
+# ============================================
+
+from dashboard_apis import (
+    get_dashboard_status,
+    get_preload_status,
+    get_health_details,
+    get_performance_data as get_dashboard_performance,
+    set_startup_time
+)
+
+@admin_app.get("/api/dashboard/status")
+async def dashboard_status():
+    """获取系统状态"""
+    return await get_dashboard_status()
+
+@admin_app.get("/api/dashboard/preload-status")
+async def dashboard_preload_status():
+    """获取预加载状态"""
+    return await get_preload_status()
+
+@admin_app.get("/api/dashboard/health")
+async def dashboard_health():
+    """获取健康检测详情"""
+    return await get_health_details()
+
+@admin_app.get("/api/dashboard/performance")
+async def dashboard_performance():
+    """获取性能数据"""
+    return await get_dashboard_performance()
+
+# ============================================
 # Prompt Management API
 # ============================================
 
@@ -391,8 +427,8 @@ async def activate_prompt(prompt_id: str):
 
 if __name__ == "__main__":
     import uvicorn
-    # 从环境变量读取端口，默认8002
-    admin_port = int(os.getenv("ADMIN_PORT", "8002"))
+    # 从环境变量读取端口，默认8889 (v6.3: fixed default port)
+    admin_port = int(os.getenv("ADMIN_PORT", "8889"))
     print(f"[Admin Panel] Starting on port {admin_port}")
     # v5.7.1: Use default uvloop for performance
     uvicorn.run(

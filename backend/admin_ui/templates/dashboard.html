@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M3 Agent 管理面板 v6.0</title>
+    <title>M3 Agent 管理面板 v6.2</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; }
@@ -91,12 +91,12 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚀 M3 Agent 管理面板 v6.0</h1>
+            <h1>🚀 M3 Agent 管理面板 v6.2</h1>
             <p>智能延迟预加载 | 定时健康检测 | 性能监控 | 元提示词管理</p>
         </div>
 
         <div class="note success">
-            ✅ <strong>v6.0 新特性：</strong>启动后15分钟预加载内存 | 每30分钟健康检测 | 每30分钟性能测试(错开15分钟) | 自动恢复机制 | 北京时间显示修复
+            ✅ <strong>v6.2 新特性：</strong>启动后15分钟预加载内存 | 每30分钟健康检测 | 每30分钟性能测试(错开15分钟) | 自动恢复机制 | 北京时间显示修复
         </div>
 
         <!-- 第一行：系统状态概览 (3个卡片) -->
@@ -369,11 +369,11 @@
         }
 
         // ============================================
-        // v6.0 Dashboard API 集成
+        // v6.2 Dashboard API 集成
         // ============================================
         
         /**
-         * 加载系统状态（v6.0新API）
+         * 加载系统状态（v6.2新API）
          */
         async function loadSystemStatus() {
             try {
@@ -781,7 +781,7 @@
          * 页面加载完成后初始化
          */
         window.onload = async function() {
-            console.log('M3 Agent Dashboard v6.0 - 初始化中...');
+            console.log('M3 Agent Dashboard v6.2 - 初始化中...');
             
             // 首次加载所有数据
             await loadAllData();
@@ -789,7 +789,7 @@
             // 每30秒自动刷新
             setInterval(loadAllData, 30000);
             
-            console.log('M3 Agent Dashboard v6.0 - 初始化完成');
+            console.log('M3 Agent Dashboard v6.2 - 初始化完成');
         };
     </script>
 </body>

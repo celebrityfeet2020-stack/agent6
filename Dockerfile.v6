@@ -74,8 +74,11 @@ RUN python3 -c "import cv2; \
     cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'); \
     cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')"
 
-# 4. 验证所有依赖
-RUN python3 -c "import playwright; import whisper; import cv2; print('All models loaded successfully!')"
+# 4. 预下载EasyOCR模型 (英文+简体中文)
+RUN python3 -c "import easyocr; reader = easyocr.Reader(['en', 'ch_sim'], gpu=False); print('EasyOCR models downloaded successfully!')"
+
+# 5. 验证所有依赖
+RUN python3 -c "import playwright; import whisper; import cv2; import easyocr; print('All models loaded successfully!')"
 
 # ============================================
 # Stage 5: 最终镜像
@@ -111,7 +114,7 @@ COPY <<'EOF' /app/start.sh
 #!/bin/bash
 set -e
 
-echo "=== M3 Agent System v6.0 Starting ==="
+echo "=== M3 Agent System v6.2 Starting ==="
 echo "Time: $(date)"
 echo "Timezone: $TZ"
 
@@ -129,7 +132,7 @@ python3 admin_app.py &
 ADMIN_PID=$!
 
 # 等待进程
-echo "=== M3 Agent System v6.0 Started ==="
+echo "=== M3 Agent System v6.2 Started ==="
 echo "Agent API: http://localhost:8888"
 echo "Chat Room: http://localhost:8889"
 echo "Admin Panel: http://localhost:8889/admin"
