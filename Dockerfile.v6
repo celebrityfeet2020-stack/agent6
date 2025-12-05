@@ -20,7 +20,7 @@ RUN npm install -g pnpm && \
 # ============================================
 # Stage 2: Python基础镜像 + 系统依赖
 # ============================================
-FROM python:3.11-slim AS base
+FROM python:3.11 AS base
 
 # 设置环境变量
 ENV PYTHONUNBUFFERED=1 \
