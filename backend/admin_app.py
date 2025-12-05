@@ -328,6 +328,13 @@ async def dashboard_performance():
     return await get_dashboard_performance()
 
 # ============================================
+# Unified Chat Room API (v6.3.2)
+# ============================================
+
+from app.api.unified_chat_room import router as unified_chat_room_router
+admin_app.include_router(unified_chat_room_router)
+
+# ============================================
 # Prompt Management API
 # ============================================
 
