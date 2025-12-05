@@ -176,6 +176,32 @@ async def get_available_models():
     except Exception as e:
         return []
 
+async def get_actual_running_model():
+    """获取实际运行的模型（v6.3.2：通过test请求获取）"""
+    llm_base_url = os.getenv("LLM_BASE_URL", "http://192.168.9.125:8000/v1")
+    llm_model_fallback = os.getenv("LLM_MODEL", "minimax/minimax-m2")
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                f"{llm_base_url}/chat/completions",
+                json={
+                    "model": llm_model_fallback,  # 使用配置的模型发起请求
+                    "messages": [{"role": "user", "content": "hi"}],
+                    "max_tokens": 1
+                }
+            )
+            data = response.json()
+            # 从响应中获取实际运行的模型
+            actual_model = data.get("model")
+            if actual_model:
+                return actual_model
+    except Exception as e:
+        print(f"[Admin Panel] Failed to get actual running model: {e}")
+    
+    # 如果失败,返回环境变量
+    return llm_model_fallback
+
 # ============================================
 # Web Interface
 # ============================================
@@ -256,9 +282,11 @@ async def run_benchmark():
 
 @admin_app.get("/api/status")
 async def get_status():
-    """获取系统状态（v3.9简化版：删除后端类型检测，保留性能监控）"""
+    """获取系统状态（v6.3.2：使用实际运行的模型）"""
     llm_base_url = os.getenv("LLM_BASE_URL", "http://192.168.9.125:8000/v1")
-    llm_model = os.getenv("LLM_MODEL", "minimax/minimax-m2")
+    
+    # v6.3.2: 获取实际运行的模型
+    actual_model = await get_actual_running_model()
     
     # 获取可用模型列表
     models = await get_available_models()
@@ -281,13 +309,13 @@ async def get_status():
         "timestamp": datetime.now().isoformat(),
         "llm_backend": {
             "status": "running" if models else "error",
-            "current_model": llm_model,
-            "available_models": [m.get("id", m.get("name", "unknown")) for m in models] if models else [llm_model],
+            "current_model": actual_model,  # v6.3.2: 使用实际运行的模型
+            "available_models": [m.get("id", m.get("name", "unknown")) for m in models] if models else [actual_model],
             "base_url": llm_base_url
         },
         "agent_api": {
             "status": "running",
-            "configured_model": llm_model,
+            "configured_model": actual_model,  # v6.3.2: 使用实际运行的模型
             "tools_count": tools_count,
             "api_port": 8000
         },
