@@ -2,11 +2,15 @@ name: Build and Push ARM64 Docker Image
 
 on:
   push:
-    tags:
-      - 'v*.*.*'  # 仅在推送版本tag时触发（如v3.8.0）
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch:
 
 jobs:
-  build-arm64:
+  build-and-push-arm64:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -24,13 +28,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract version from tag
-        id: version
-        run: |
-          # 从tag中提取版本号（去掉v前缀）
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
 
       - name: Maximize disk space (Free up ~50GB)
         run: |
@@ -94,11 +92,15 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: ./Dockerfile.v6
           platforms: linux/arm64
           push: true
           tags: |
-            junpeng999/agent-system:latest
-            junpeng999/agent-system:${{ steps.version.outputs.tag }}
-            junpeng999/agent-system:${{ steps.version.outputs.tag }}-arm64
+            junpeng999/agent6:latest-arm64
+            junpeng999/agent6:v6.0.0-arm64
+          build-args: |
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            VCS_REF=${{ github.sha }}
+            VERSION=v6.0.0
           cache-from: type=gha
           cache-to: type=gha,mode=max
