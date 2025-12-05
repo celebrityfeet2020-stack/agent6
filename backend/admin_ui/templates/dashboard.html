@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M3 Agent 管理面板 v6.2</title>
+    <title>M3 Agent 管理面板 v6.3.2</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; }
@@ -91,12 +91,12 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚀 M3 Agent 管理面板 v6.2</h1>
+            <h1>🚀 M3 Agent 管理面板 v6.3.2</h1>
             <p>智能延迟预加载 | 定时健康检测 | 性能监控 | 元提示词管理</p>
         </div>
 
         <div class="note success">
-            ✅ <strong>v6.2 新特性：</strong>启动后15分钟预加载内存 | 每30分钟健康检测 | 每30分钟性能测试(错开15分钟) | 自动恢复机制 | 北京时间显示修复
+            ✅ <strong>v6.3.2 新特性：</strong>启动后5分钟预加载内存 | 20分钟性能测试 | 每30分钟健康检测 | 自动模型检测 | 聊天室修复
         </div>
 
         <!-- 第一行：系统状态概览 (3个卡片) -->
@@ -437,7 +437,7 @@
                     time.style.color = '#10b981';
                 } else {
                     icon.textContent = '⏳';
-                    time.textContent = '等待中... (T+15分钟)';
+                    time.textContent = '等待中... (T+5分钟)';
                     time.style.color = '#f59e0b';
                 }
                 

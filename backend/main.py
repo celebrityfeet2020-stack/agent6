@@ -101,9 +101,9 @@ async def startup_event():
     global browser_pool, tools, llm_with_tools, app_graph
     from app.core.startup import initialize_browser_pool_and_tools
     
-    # v6.1: Browser pool and tools will be loaded by background tasks (15 minutes after startup)
-    logger.info("[v6.1] Browser pool and tools will be loaded in background (15 minutes delay)")
-    logger.info("[v6.1] This avoids asyncio conflicts during startup")
+    # v6.3.2: Browser pool and tools will be loaded by background tasks (5 minutes after startup)
+    logger.info("[v6.3.2] Browser pool and tools will be loaded in background (5 minutes delay)")
+    logger.info("[v6.3.2] This avoids asyncio conflicts during startup")
     
     # Create empty tools list for now (will be populated by background tasks)
     browser_pool = None

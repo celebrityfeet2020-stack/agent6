@@ -59,13 +59,13 @@ async def get_preload_status() -> Dict[str, Any]:
     Returns:
         {
             "status": "completed",  # waiting/loading/completed
-            "elapsed_time": 900,  # 已等待时间(秒)
-            "target_time": 900,  # 目标时间(15分钟=900秒)
+            "elapsed_time": 300,  # 已等待时间(秒)
+            "target_time": 300,  # 目标时间(5分钟=300秒)
         }
     """
     now = datetime.now()
     elapsed_seconds = int((now - _startup_time).total_seconds())
-    target_seconds = 15 * 60  # 15分钟
+    target_seconds = 5 * 60  # 5分钟
     
     if elapsed_seconds < target_seconds:
         status = "waiting"

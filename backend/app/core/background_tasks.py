@@ -175,9 +175,9 @@ class BackgroundTasksManager:
     async def _wave1_check(self):
         """第1波检查：工具池预加载 + 模型API检测（每30分钟，轻量级）"""
         try:
-            # 首次等待15分钟
-            logger.info("⏰ Wave 1 scheduled in 15 minutes...")
-            await asyncio.sleep(900)  # 15分钟
+            # 首次等待5分钟
+            logger.info("⏰ Wave 1 scheduled in 5 minutes...")
+            await asyncio.sleep(300)  # 5分钟
             
             while True:
                 try:
@@ -215,9 +215,9 @@ class BackgroundTasksManager:
     async def _wave2_check(self):
         """第2波检查：性能测试 + 全面体检（每30分钟，延迟15分钟，重量级）"""
         try:
-            # 首次等待30分钟
-            logger.info("⏰ Wave 2 scheduled in 30 minutes...")
-            await asyncio.sleep(1800)  # 30分钟
+            # 首次等待20分钟
+            logger.info("⏰ Wave 2 scheduled in 20 minutes...")
+            await asyncio.sleep(1200)  # 20分钟
             
             while True:
                 try:
