@@ -28,8 +28,6 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-
-
       - name: Maximize disk space (Free up ~50GB)
         run: |
           echo "=== 清理前磁盘空间 ==="
@@ -60,13 +58,10 @@ jobs:
           echo "=== 删除 Boost (~1.5GB) ==="
           sudo rm -rf /usr/local/share/boost
           
-          echo "=== 删除 Rust (~2GB) ==="
-          sudo rm -rf /usr/share/rust
-          
           echo "=== 删除 Go (~1GB) ==="
           sudo rm -rf /usr/local/go
           
-          echo "=== 删除 Node.js 多版本 (~2GB) ==="
+          echo "=== 删除 Node.js 多版本 (~1GB) ==="
           sudo rm -rf /opt/hostedtoolcache/node
           
           echo "=== 删除 Python 多版本 (~1GB) ==="
@@ -99,14 +94,11 @@ jobs:
             junpeng999/agent6:latest-arm64
             junpeng999/agent6:v6.0.0-arm64
           build-args: |
-            BUILDKIT_INLINE_CACHE=1
-          cache-from: type=registry,ref=junpeng999/agent6:buildcache-arm64
-          cache-to: type=registry,ref=junpeng999/agent6:buildcache-arm64,mode=max
-          # ARM64构建需要更长时间
-          no-cache: false
-          build-args: |
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
             VCS_REF=${{ github.sha }}
             VERSION=v6.0.0
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      
+      - name: Image digest
+        run: echo "ARM64 image pushed successfully!"
