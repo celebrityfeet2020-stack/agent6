@@ -1,5 +1,5 @@
 """FastAPI Backend for M3 Agent System
-M3 Agent System v5.9.0 - Main Application
+A6 System v6.2.0 - Main Application
 重大性能优化：全局浏览器池 + 模型预加载
 完整的 Agent 工作流，支持工具调用和 OpenAI 兼容接口
 

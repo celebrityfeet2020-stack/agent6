@@ -1,5 +1,5 @@
 """
-M3 Agent System v5.7.1 - Admin Panel
+A6 System v6.2.0 - Admin Panel
 独立运行在端口 8002，提供管理界面和 API
 v5.7.1更新：线程池浏览器+工具池，保留uvloop性能，工具调用速度提升10-20倍
 v5.6更新：修复性能监控定时任务，保持任务引用防止被垃圾回收

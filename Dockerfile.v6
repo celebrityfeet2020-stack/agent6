@@ -1,4 +1,4 @@
-# M3 Agent System v6.0 - Optimized Dockerfile
+# A6 System v6.2.0 - Optimized Dockerfile (Build: 2025-12-05)
 # 预下载所有模型和依赖,避免运行时下载
 
 # ============================================
