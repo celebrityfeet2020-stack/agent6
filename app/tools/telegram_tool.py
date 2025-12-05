@@ -2,11 +2,11 @@
 from langchain_core.tools import BaseTool
 from telethon import TelegramClient
 from telegram import Bot
-from playwright.async_api import Page
+from playwright.sync_api import Page
 import asyncio
 from typing import Optional
 import logging
-from app.core.browser_sync_wrapper import get_page_sync, close_page_sync
+
 
 logger = logging.getLogger(__name__)
 
@@ -67,10 +67,10 @@ class TelegramTool(BaseTool):
                 page: Optional[Page] = None
                 
                 try:
-                    # Get page from browser pool (v5.2 async optimization)
+                    # Get page from browser pool (v5.9.1 FIXED - sync mode async optimization)
                     if self.browser_pool:
-                        page = get_page_sync(self.browser_pool)
-                        logger.debug("Using browser pool (v5.2)")
+                        page = self.browser_pool.get_page()
+                        logger.debug("Using browser pool (v5.9.1 FIXED - sync mode)")
                     else:
                         raise RuntimeError("Browser pool not initialized")
                     
@@ -88,10 +88,10 @@ class TelegramTool(BaseTool):
                     return f"Message sent via Browser to {recipient}"
                 
                 finally:
-                    # Cleanup (v5.2)
+                    # Cleanup (v5.9.1 FIXED - sync mode)
                     if page:
                         try:
-                            close_page_sync(page)
+                            page.close()
                         except Exception as e:
                             logger.warning(f"Error closing page: {e}")
             

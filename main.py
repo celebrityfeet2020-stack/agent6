@@ -28,6 +28,7 @@ from typing import List, Optional, Dict, Any, Literal
 from config.settings import settings
 from config.logging_config import main_logger as logger
 from app.tools import *
+from app.api.chat_stream import stream_agent_response, StreamChatRequest
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import StateGraph, MessagesState, END
@@ -45,9 +46,9 @@ import os
 # ============================================
 
 app = FastAPI(
-    title="Agent System",
-    version="5.1.0",
-    description="M3 Agent v5.1 - Bug Fix: Event loop conflict + nginx config. 重大性能优化：全局浏览器池+模型预加载，极大提升工具使用效率。支持SSE流式输出、工具调用、RPA自动化、多轮对话和性能监控"
+    title="M3 Agent System",
+    version="6.0.0",
+    description="M3 Agent v6.0 - 智能延迟预加载:启动后15分钟预加载内存,避免启动冲突。定时健康检测(每30分钟)和性能监控(每30分钟,错开15分钟)。完整的控制面板API汇报。支持SSE流式输出、三角聊天室、工具调用、RPA自动化"
 )
 
 app.add_middleware(
@@ -58,20 +59,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# v5.1: Startup event to initialize browser pool, tools, and workflow
+# v6.0: Startup event - lightweight initialization, delayed preload
 @app.on_event("startup")
 async def startup_event():
-    """Initialize browser pool, tools, and workflow on application startup."""
+    """Initialize browser pool, tools, workflow and start background tasks."""
     global browser_pool, tools, llm_with_tools, app_graph
     from app.core.startup import initialize_browser_pool_and_tools
     
-    # Initialize browser pool and tools
-    browser_pool, tools = await initialize_browser_pool_and_tools()
+    logger.info("=" * 80)
+    logger.info("🚀 M3 Agent System v6.0 Starting...")
+    logger.info("=" * 80)
+    
+    # Initialize browser pool and tools (sync, lightweight)
+    browser_pool, tools = initialize_browser_pool_and_tools()
     
     # Bind tools to LLM
     llm_with_tools = llm.bind_tools(tools)
     
-    # Compile workflow (moved from module level to avoid using None llm_with_tools)
+    # Compile workflow
     from langgraph.checkpoint.memory import MemorySaver
     from langgraph.graph import StateGraph, MessagesState, END
     workflow = StateGraph(MessagesState)
@@ -90,7 +95,15 @@ async def startup_event():
     checkpointer = MemorySaver()
     app_graph = workflow.compile(checkpointer=checkpointer)
     
-    logger.info("✅ Startup complete: browser pool, tools, and workflow ready")
+    logger.info("✅ Core initialization complete")
+    
+    # Start background tasks (delayed preload + monitoring)
+    from app.core.background_tasks import background_tasks_manager
+    await background_tasks_manager.start()
+    
+    logger.info("=" * 80)
+    logger.info("✅ M3 Agent System v6.0 Ready")
+    logger.info("=" * 80)
 
 # 注册Fleet API路由（用于与D5管理航母和Temporal调度系统对接）
 from app.api.fleet_api import router as fleet_router
@@ -99,6 +112,10 @@ app.include_router(fleet_router)
 # 注册LangGraph API路由（用于assistant-ui等客户端）
 from app.api.langgraph_adapter import router as langgraph_router
 app.include_router(langgraph_router)
+
+# 注册Dashboard API路由（v6.0 新增：控制面板API）
+from app.api.dashboard_api import router as dashboard_router
+app.include_router(dashboard_router)
 
 # ============================================
 # Initialize LLM and Tools
@@ -327,6 +344,40 @@ async def simple_chat(request: ChatRequest):
         ChatResponse with agent response and tool call info
     """
     return await agent_chat(request)
+
+@app.post("/api/chat/stream")
+async def chat_stream(request: StreamChatRequest):
+    """
+    SSE流式聊天接口 - v6.0新增
+    
+    支持:
+    - SSE流式输出
+    - 思维链可视化
+    - 工具调用可视化
+    - 三方可见 (用户/API/Admin)
+    - 共享会话 (默认default_session)
+    
+    Args:
+        request: StreamChatRequest with message, thread_id, source, metadata
+    
+    Returns:
+        StreamingResponse with SSE events
+    """
+    return StreamingResponse(
+        stream_agent_response(
+            app_graph=app_graph,
+            message=request.message,
+            thread_id=request.thread_id,
+            source=request.source,
+            metadata=request.metadata
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # 禁用nginx缓冲
+        }
+    )
 
 @app.get("/api/tools")
 async def list_tools():

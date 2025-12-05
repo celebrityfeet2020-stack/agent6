@@ -6,7 +6,8 @@ v3.9修复：后端检测bug、性能监控不切换模型
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
@@ -157,10 +158,33 @@ async def get_available_models():
 # Web Interface
 # ============================================
 
-@admin_app.get("/", response_class=HTMLResponse)
+@admin_app.get("/admin", response_class=HTMLResponse)
 async def dashboard(request: Request):
     """管理面板主页"""
     return templates.TemplateResponse("dashboard.html", {"request": request})
+
+@admin_app.get("/", response_class=HTMLResponse)
+async def root():
+    """根路径 - 聊天室UI"""
+    chatroom_dist = "/app/chatroom_ui/dist"
+    if os.path.exists(f"{chatroom_dist}/index.html"):
+        return FileResponse(f"{chatroom_dist}/index.html")
+    else:
+        return HTMLResponse(content="""
+        <html>
+            <head><title>M3 Agent v6.0</title></head>
+            <body style="font-family: sans-serif; padding: 50px; text-align: center;">
+                <h1>M3 Agent v6.0</h1>
+                <p>聊天室UI尚未编译。请运行:</p>
+                <pre style="background: #f5f5f5; padding: 20px; border-radius: 5px;">
+cd chatroom_ui
+pnpm install
+pnpm run build
+                </pre>
+                <p>或访问 <a href="/admin">管理面板</a></p>
+            </body>
+        </html>
+        """)
 
 # ============================================
 # System Status API
@@ -359,6 +383,14 @@ async def activate_prompt(prompt_id: str):
     
     save_prompts(prompts)
     return {"status": "success"}
+
+# ============================================
+# Static Files
+# ============================================
+
+# 聊天室UI静态文件
+if os.path.exists("/app/chatroom_ui/dist"):
+    admin_app.mount("/assets", StaticFiles(directory="/app/chatroom_ui/dist/assets"), name="chat-assets")
 
 # ============================================
 # Main Entry Point

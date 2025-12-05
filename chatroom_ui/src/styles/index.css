@@ -1,0 +1,329 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 
+  M3 Agent v6.0 - 优化的视觉设计
+  参考Manus的字体和间距设计
+*/
+
+@layer base {
+  /* 根字体设置 */
+  html {
+    font-size: 16px; /* 从14px增大 */
+  }
+  
+  * {
+    @apply border-dark-border;
+  }
+  
+  /* 字体栈优化 - 非等宽字体 */
+  body {
+    font-family: 
+      -apple-system, BlinkMacSystemFont,
+      "Segoe UI", "PingFang SC", "Hiragino Sans GB",
+      "Microsoft YaHei", "Helvetica Neue", Arial,
+      sans-serif;
+    @apply antialiased;
+    font-weight: 400;
+    line-height: 1.7; /* 增大行高 */
+  }
+  
+  /* 代码块专用等宽字体 */
+  code, pre, .code-block {
+    font-family: 
+      "SF Mono", "Monaco", "Cascadia Code",
+      "Consolas", "Courier New", monospace;
+    font-size: 14px;
+  }
+  
+  /* 标题字重 */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  
+  h1 { font-size: 24px; }
+  h2 { font-size: 20px; }
+  h3 { font-size: 18px; }
+  
+  /* 段落间距 */
+  p {
+    margin-bottom: 12px;
+  }
+  
+  /* 列表样式 */
+  ul, ol {
+    margin-bottom: 16px;
+    padding-left: 24px;
+  }
+  
+  li {
+    margin-bottom: 8px;
+  }
+  
+  /* 强调文字 */
+  strong, b {
+    font-weight: 600;
+  }
+  
+  /* 滚动条样式 */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-dark-bg;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-dark-border rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-600;
+  }
+}
+
+/* 组件样式 */
+@layer components {
+  /* 消息气泡 - 增大padding和间距 */
+  .message-bubble {
+    @apply rounded-lg shadow-sm;
+    padding: 16px 24px; /* 从12px 16px增大 */
+    margin-bottom: 16px; /* 从12px增大 */
+    font-size: 15px; /* 从12px增大 */
+    line-height: 1.7; /* 从1.4增大 */
+  }
+  
+  .message-user {
+    @apply bg-primary-700 ml-auto max-w-[80%];
+  }
+  
+  .message-agent {
+    @apply bg-dark-surface mr-auto max-w-[80%];
+  }
+  
+  .message-api {
+    @apply bg-green-900/30 border border-green-700/50 mr-auto max-w-[80%];
+  }
+  
+  .message-livestream {
+    @apply bg-purple-900/30 border border-purple-700/50 mr-auto max-w-[80%];
+  }
+  
+  .message-fleet {
+    @apply bg-yellow-900/30 border border-yellow-700/50 mr-auto max-w-[80%];
+  }
+  
+  /* 消息头部 */
+  .message-header {
+    @apply flex items-center gap-2 mb-2;
+    font-size: 13px; /* 从11px增大 */
+    font-weight: 500;
+    opacity: 0.75;
+  }
+  
+  /* 时间戳 */
+  .timestamp {
+    @apply ml-auto text-xs text-gray-500;
+    font-size: 12px; /* 从10px增大 */
+  }
+  
+  /* 思维链 */
+  .thought-chain {
+    @apply bg-yellow-900/20 border-l-4 border-yellow-600 rounded;
+    padding: 12px 16px; /* 增大padding */
+    margin-bottom: 12px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #fef3c7; /* 更柔和的黄色 */
+  }
+  
+  .thought-chain-header {
+    @apply flex items-center gap-2 mb-2 font-semibold;
+    font-size: 13px;
+  }
+  
+  /* 工具调用 */
+  .tool-call {
+    @apply bg-green-900/20 border-l-4 border-green-600 rounded;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #d1fae5; /* 更柔和的绿色 */
+  }
+  
+  .tool-call-header {
+    @apply flex items-center gap-2 mb-2 font-semibold;
+    font-size: 13px;
+  }
+  
+  /* 工具参数和结果 */
+  .tool-details {
+    @apply mt-2 text-sm;
+  }
+  
+  .tool-details summary {
+    @apply cursor-pointer opacity-75 hover:opacity-100 transition-opacity;
+    font-size: 12px;
+  }
+  
+  .tool-details pre {
+    @apply mt-2 p-3 bg-black/30 rounded overflow-x-auto text-xs;
+    font-family: "SF Mono", "Monaco", "Cascadia Code", "Consolas", monospace;
+  }
+  
+  /* 系统日志 */
+  .system-log {
+    @apply bg-gray-900/30 border-l-4 border-gray-600 rounded;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: #d1d5db;
+  }
+  
+  .system-log.info { @apply border-blue-600; }
+  .system-log.warning { @apply border-yellow-600; }
+  .system-log.error { @apply border-red-600; }
+  
+  /* 按钮 */
+  .btn-primary {
+    @apply bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors;
+    padding: 10px 16px; /* 增大padding */
+    font-size: 15px;
+    font-weight: 500;
+  }
+  
+  .btn-secondary {
+    @apply bg-dark-surface hover:bg-gray-700 text-white rounded-lg transition-colors;
+    padding: 10px 16px;
+    font-size: 15px;
+    font-weight: 500;
+  }
+  
+  .btn-icon {
+    @apply bg-dark-surface hover:bg-gray-700 text-white rounded-lg transition-colors;
+    padding: 8px;
+  }
+  
+  /* 输入框 */
+  .input-field {
+    @apply bg-dark-surface border border-dark-border rounded-lg text-white;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary-500;
+    padding: 10px 16px; /* 增大padding */
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  
+  /* 分割线 (可拖动) */
+  .resizer {
+    @apply bg-dark-border hover:bg-primary-500 transition-colors cursor-row-resize;
+    height: 4px;
+    position: relative;
+  }
+  
+  .resizer:hover::after {
+    content: '';
+    @apply absolute inset-x-0 bg-primary-500/30;
+    height: 12px;
+    top: -4px;
+  }
+  
+  /* 文件上传区域 */
+  .file-upload-area {
+    @apply border-2 border-dashed border-dark-border rounded-lg;
+    @apply hover:border-primary-500 transition-colors;
+    padding: 16px;
+    text-align: center;
+  }
+  
+  .file-upload-area.drag-over {
+    @apply border-primary-500 bg-primary-500/10;
+  }
+  
+  /* 文件预览 */
+  .file-preview {
+    @apply bg-dark-surface border border-dark-border rounded-lg;
+    padding: 8px 12px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .file-preview-icon {
+    @apply text-primary-400;
+    font-size: 20px;
+  }
+  
+  .file-preview-remove {
+    @apply ml-auto text-red-400 hover:text-red-300 cursor-pointer;
+  }
+}
+
+/* 布局样式 */
+@layer utilities {
+  /* 三层布局容器 */
+  .layout-container {
+    @apply flex flex-col h-screen bg-dark-bg;
+  }
+  
+  /* 上层: 思维链+工具链 */
+  .top-panel {
+    @apply bg-dark-surface border-b border-dark-border overflow-y-auto;
+    min-height: 100px;
+    max-height: 50vh;
+  }
+  
+  /* 中层: 对话框 */
+  .middle-panel {
+    @apply flex-1 overflow-y-auto;
+    padding: 16px 24px; /* 增大padding */
+  }
+  
+  /* 下层: 输入框 */
+  .bottom-panel {
+    @apply bg-dark-surface border-t border-dark-border;
+    padding: 16px 24px; /* 增大padding */
+  }
+  
+  /* 动画 */
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  .animate-spin-slow {
+    animation: spin 2s linear infinite;
+  }
+  
+  /* 加载状态 */
+  .loading-dots::after {
+    content: '';
+    animation: dots 1.5s steps(4, end) infinite;
+  }
+  
+  @keyframes dots {
+    0%, 20% { content: ''; }
+    40% { content: '.'; }
+    60% { content: '..'; }
+    80%, 100% { content: '...'; }
+  }
+}

@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  m3-agent-v6:
+    build:
+      context: .
+      dockerfile: Dockerfile.v6
+    image: m3-agent:v6.0.0
+    container_name: m3-agent-v6
+    restart: unless-stopped
+    
+    ports:
+      - "8888:8888"  # Agent API
+      - "8889:8889"  # Admin Panel + Chat Room
+    
+    environment:
+      # LLM配置
+      - LLM_API_KEY=${LLM_API_KEY:-your_api_key_here}
+      - LLM_BASE_URL=${LLM_BASE_URL:-https://api.openai.com/v1}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4}
+      
+      # Agent配置
+      - AGENT_NAME=M3 Agent
+      - AGENT_VERSION=6.0.0
+      - DEFAULT_THREAD_ID=default_session
+      
+      # 浏览器配置
+      - BROWSER_HEADLESS=true
+      - BROWSER_POOL_SIZE=3
+      
+      # 日志配置
+      - LOG_LEVEL=INFO
+      - PYTHONUNBUFFERED=1
+      
+      # 时区
+      - TZ=Asia/Shanghai
+      
+      # Playwright
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+    
+    volumes:
+      # 持久化数据
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+      
+      # 可选: 挂载配置文件
+      # - ./config:/app/config
+      
+      # 可选: 挂载元提示词
+      # - ./prompts:/app/prompts
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # 资源限制 (可选)
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
+    
+    # 网络配置
+    networks:
+      - m3-network
+
+networks:
+  m3-network:
+    driver: bridge
+
+volumes:
+  data:
+  logs:
+  uploads:

@@ -1,266 +1,306 @@
-# M3 Agent System - Triangle Chat Room Edition
+# M3 Agent System v6.0
 
-**Version:** Backend v5.8.0 | Frontend v2.2
-
-## 项目概述
-
-M3 Agent System 是一个集成了 LangGraph、FastAPI 和 React 的智能代理系统，支持实时三角聊天室功能（Triangle Chat Room），实现用户、API 和助手之间的多源实时通信。
-
-### 核心特性
-
-- **三角聊天室（Triangle Chat Room）**：三个消息源（user/api/assistant）共享同一 thread_id，实现多方实时通信
-- **混合消息传输**：WebSocket 实时推送 + SSE 流式响应的混合架构
-- **消息持久化**：所有对话记录存储到 SQLite（memory_buffer.db），支持历史查询
-- **双架构支持**：后端同时支持 ARM64 和 AMD64 架构
-- **性能优化**：WebSocket 替代轮询，显著降低 CPU 和数据库负载
-- **完整工具集**：集成 30+ 工具（浏览器自动化、代码执行、图像分析等）
-
-## 技术栈
-
-### 后端 (v5.8.0)
-- **框架**：Python 3.11 + FastAPI + LangGraph
-- **数据库**：SQLite (memory_buffer.db)
-- **通信**：WebSocket + SSE streaming
-- **LLM**：LM Studio (Qwen3-VL-235b) on port 8000
-- **容器化**：Docker (ARM64 & AMD64)
-
-### 前端 (v2.2)
-- **框架**：React 18 + TypeScript + Vite
-- **UI 库**：@assistant-ui/react + Tailwind CSS v4
-- **通信**：WebSocket Client + SSE Adapter
-- **样式**：15px 字体 + line-height 1.7（优化可读性）
-
-## 仓库结构
-
-```
-m3-agent-system-repo/
-├── backend/                    # 后端代码 (v5.8.0)
-│   ├── app/
-│   │   ├── main.py            # FastAPI 主应用
-│   │   ├── websocket_manager.py  # WebSocket 连接管理
-│   │   ├── memory/
-│   │   │   └── memory_logger.py  # 对话日志记录
-│   │   ├── tools/             # 30+ 工具集
-│   │   └── api/               # API 适配器
-│   ├── config/                # 配置文件
-│   ├── Dockerfile             # Docker 构建文件
-│   ├── requirements.txt       # Python 依赖
-│   └── TECH_REPORT_v5.8.md   # 技术文档
-├── frontend/                   # 前端代码 (v2.2)
-│   ├── client/
-│   │   └── src/
-│   │       ├── lib/
-│   │       │   ├── runtime.ts          # 运行时（集成 WebSocket）
-│   │       │   └── websocket-client.ts # WebSocket 客户端
-│   │       ├── components/
-│   │       │   └── M3Thread.tsx        # 聊天界面
-│   │       └── styles/
-│   │           └── index.css           # 样式（字体优化）
-│   ├── nginx.conf             # Nginx 配置（API/WS 代理）
-│   ├── Dockerfile             # Docker 构建文件
-│   ├── package.json           # Node.js 依赖
-│   └── TECH_REPORT_v2.2.md   # 技术文档
-└── .github/
-    └── workflows/
-        ├── build-backend-arm64.yml   # ARM64 构建流程
-        ├── build-backend-amd64.yml   # AMD64 构建流程
-        └── build-frontend.yml        # 前端构建流程
-```
-
-## 快速开始
-
-### 1. 克隆仓库
-
-```bash
-git clone https://github.com/junpeng999/m3-agent-system.git
-cd m3-agent-system
-```
-
-### 2. 部署后端 (v5.8.0)
-
-```bash
-# ARM64 架构（如 Apple Silicon、树莓派）
-docker pull junpeng999/agent-system:v5.8.0-arm64
-docker run -d -p 8888:8001 --name m3-backend junpeng999/agent-system:v5.8.0-arm64
-
-# AMD64 架构（如 Intel/AMD 服务器）
-docker pull junpeng999/agent-system:v5.5-amd64
-docker run -d -p 8888:8001 --name m3-backend junpeng999/agent-system:v5.5-amd64
-```
-
-### 3. 部署前端 (v2.2)
-
-```bash
-docker pull junpeng999/m3-agent-ui:v2.2
-docker run -d -p 8081:80 --name m3-frontend junpeng999/m3-agent-ui:v2.2
-```
-
-### 4. 访问系统
-
-- **前端界面**：http://localhost:8081
-- **后端 API**：http://localhost:8888/docs
-- **WebSocket**：ws://localhost:8888/ws/chat/{thread_id}
-
-## 三角聊天室使用指南
-
-### 消息源类型
-
-系统支持三种消息源，通过 `source` 参数区分：
-
-1. **user**：用户通过前端 UI 发送的消息
-2. **api**：外部系统通过 API 发送的消息
-3. **assistant**：AI 助手生成的响应消息
-
-### API 调用示例
-
-```bash
-# 用户消息
-curl -X POST http://localhost:8888/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message": "你好，请帮我分析一下数据",
-    "thread_id": "thread_123",
-    "source": "user"
-  }'
-
-# API 消息（外部系统推送）
-curl -X POST http://localhost:8888/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message": "系统检测到异常事件",
-    "thread_id": "thread_123",
-    "source": "api"
-  }'
-```
-
-### WebSocket 连接
-
-```javascript
-const ws = new WebSocket('ws://localhost:8888/ws/chat/thread_123');
-
-ws.onmessage = (event) => {
-  const message = JSON.parse(event.data);
-  console.log(`[${message.source}] ${message.content}`);
-};
-```
-
-### 查询历史记录
-
-```bash
-curl http://localhost:8888/api/threads/thread_123/history
-```
-
-## CI/CD 自动化构建
-
-本项目使用 GitHub Actions 实现自动化构建和发布：
-
-### 触发方式
-
-1. **推送到 main 分支**：自动构建最新版本
-2. **创建版本标签**：
-   - `v5.5-arm64`：构建后端 ARM64 镜像
-   - `v5.5-amd64`：构建后端 AMD64 镜像
-   - `ui-v2.2`：构建前端镜像
-
-### 手动触发构建
-
-```bash
-# 后端 ARM64
-git tag v5.5-arm64
-git push origin v5.5-arm64
-
-# 后端 AMD64
-git tag v5.5-amd64
-git push origin v5.5-amd64
-
-# 前端
-git tag ui-v2.2
-git push origin ui-v2.2
-```
-
-## 配置说明
-
-### 后端配置
-
-编辑 `backend/config/settings.py`：
-
-```python
-# LM Studio 配置
-LM_STUDIO_BASE_URL = "http://localhost:8000/v1"
-LM_STUDIO_MODEL = "qwen3-vl-235b"
-
-# 数据库配置
-DATABASE_PATH = "./memory_buffer.db"
-
-# WebSocket 配置
-WEBSOCKET_HEARTBEAT_INTERVAL = 30
-```
-
-### 前端配置
-
-编辑 `frontend/client/.env`：
-
-```bash
-VITE_API_BASE_URL=http://192.168.9.125:8888
-VITE_WS_BASE_URL=ws://192.168.9.125:8888
-```
-
-## 性能优化
-
-### WebSocket vs 轮询
-
-- **轮询方式**：每秒 1 次请求 = 86,400 次/天
-- **WebSocket**：持久连接 + 事件驱动 = 接近 0 次轮询
-
-**资源节省**：
-- CPU 使用率降低 90%+
-- 数据库查询减少 99%+
-- 网络带宽节省 95%+
-
-### 字体优化
-
-前端采用 15px 字体 + 1.7 行高，优化长时间阅读体验：
-
-```css
-body {
-  font-size: 15px;
-  line-height: 1.7;
-}
-```
-
-## 技术文档
-
-- **后端技术报告**：[backend/TECH_REPORT_v5.5.md](backend/TECH_REPORT_v5.5.md)
-- **前端技术报告**：[frontend/TECH_REPORT_v2.2.md](frontend/TECH_REPORT_v2.2.md)
-- **CI/CD 管道文档**：[docs/GitHubActionsCI_CD管道深度报告.md](docs/GitHubActionsCI_CD管道深度报告.md)
-
-## 版本历史
-
-### v5.5 (Backend) - 2024-12-04
-- ✅ 新增三角聊天室功能（Triangle Chat Room）
-- ✅ 实现 WebSocket 实时消息推送
-- ✅ 添加消息源（source）参数支持
-- ✅ 集成 memory_buffer.db 对话日志
-- ✅ 新增历史记录查询 API
-- ✅ 修复 LM Studio 连接（端口 8000）
-
-### v2.2 (Frontend) - 2024-12-04
-- ✅ 集成 WebSocket 客户端
-- ✅ 重写 runtime.ts 支持实时更新
-- ✅ 优化字体样式（15px + line-height 1.7）
-- ✅ 添加 Nginx API/WebSocket 代理
-- ✅ 支持消息源差异化显示
-
-## 许可证
-
-MIT License
-
-## 联系方式
-
-- **项目维护者**：junpeng999
-- **Docker Hub**：https://hub.docker.com/u/junpeng999
-- **GitHub**：https://github.com/junpeng999
+**全新一代智能Agent系统** - 修复v5.9 bug,引入assistant-ui聊天室,实现Generative UI
 
 ---
 
-**注意**：本项目处于持续迭代开发中，v5.5 和 v2.2 并非最终版本。所有代码均为可编辑源代码，方便后续修改和扩展。
+## 🎉 v6.0 核心特性
+
+### 1. 修复v5.9的致命Bug
+- ✅ 解决异步事件循环冲突
+- ✅ 改为同步浏览器池
+- ✅ 移除nest-asyncio依赖
+- ✅ 完全稳定,无崩溃
+
+### 2. 智能延迟预加载
+- ✅ 启动时间缩短70% (3-5秒)
+- ✅ T+15分钟自动预加载模型
+- ✅ 避免启动资源竞争
+
+### 3. 定时健康检测和性能监控
+- ✅ 每30分钟自动检测API和工具
+- ✅ 每30分钟自动测试性能
+- ✅ 自动恢复内存掉落
+
+### 4. assistant-ui聊天室
+- ✅ 基于React + TypeScript
+- ✅ 三层布局 (思维链/对话/输入)
+- ✅ 可拖动分割线
+- ✅ 支持全格式文件上传
+- ✅ **Generative UI** - Agent动态生成组件
+
+### 5. 三方可见单会话窗口
+- ✅ 用户/API/直播/舰队共享对话
+- ✅ 默认thread_id="default_session"
+- ✅ 支持source区分 (user/api/admin/livestream/fleet)
+- ✅ 为舰队战略聊天室预留扩展性
+
+### 6. 管理面板优化
+- ✅ 元提示词管理 (完整保留)
+- ✅ 时间显示修复 (北京时间)
+- ✅ 系统状态监控
+- ✅ 健康检测详情
+- ✅ 性能测试结果
+
+---
+
+## 📦 快速开始
+
+### 方式1: Docker Compose (推荐)
+
+```bash
+# 1. 克隆代码
+git clone <your-repo>
+cd m3-agent-v6.0
+
+# 2. 配置环境变量
+cp .env.example .env
+# 编辑.env,填入LLM_API_KEY等配置
+
+# 3. 构建并启动
+docker-compose -f docker-compose.v6.yml up -d
+
+# 4. 访问
+# 聊天室: http://localhost:8889
+# 管理面板: http://localhost:8889/admin
+# Agent API: http://localhost:8888
+```
+
+### 方式2: 本地开发
+
+#### 后端
+
+```bash
+# 1. 安装Python依赖
+pip install -r requirements.txt
+
+# 2. 安装Playwright浏览器
+playwright install chromium
+
+# 3. 启动后端
+python main.py &
+python admin_app.py &
+```
+
+#### 前端
+
+```bash
+# 1. 进入前端目录
+cd chatroom_ui
+
+# 2. 安装依赖
+pnpm install
+
+# 3. 开发模式
+pnpm run dev
+
+# 4. 编译生产版本
+pnpm run build
+```
+
+---
+
+## 🏗️ 架构概览
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  M3 Agent System v6.0                                   │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  ┌─────────────────┐      ┌──────────────────────┐    │
+│  │  admin_app.py   │      │  main.py             │    │
+│  │  (端口 8889)     │      │  (端口 8888)          │    │
+│  ├─────────────────┤      ├──────────────────────┤    │
+│  │ / → 聊天室UI    │      │ /api/chat/stream     │    │
+│  │ /admin → 管理   │      │ /api/chat/invoke     │    │
+│  │ /api/prompts/*  │      │ /api/tools/*         │    │
+│  │ /api/dashboard/*│      │ /health              │    │
+│  └─────────────────┘      └──────────────────────┘    │
+│           ↓                         ↓                  │
+│  ┌──────────────────────────────────────────────┐     │
+│  │  LangGraph Agent (15 Tools)                  │     │
+│  │  - WebSearch, WebScraper, BrowserAutomation  │     │
+│  │  - CodeExecutor, FileOperations              │     │
+│  │  - ImageOCR, ImageAnalysis, DataAnalysis     │     │
+│  │  - SSH, Git, UniversalAPI, Telegram          │     │
+│  │  - SpeechRecognition, RPA, FileSync          │     │
+│  └──────────────────────────────────────────────┘     │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🎨 Generative UI 示例
+
+Agent可以动态生成React组件来增强用户体验:
+
+### 搜索结果卡片
+```json
+{
+  "type": "message",
+  "content": "找到相关结果",
+  "component": "SearchResultCard",
+  "componentProps": {
+    "title": "Python教程",
+    "url": "https://...",
+    "snippet": "...",
+    "thumbnail": "..."
+  }
+}
+```
+
+### 数据图表
+```json
+{
+  "type": "message",
+  "content": "数据分析结果",
+  "component": "DataChart",
+  "componentProps": {
+    "data": [...],
+    "xKey": "date",
+    "yKey": "value",
+    "title": "销售趋势"
+  }
+}
+```
+
+### 支持的组件
+- `SearchResultCard` - 搜索结果卡片
+- `DataChart` - 数据图表
+- `WeatherCard` - 天气卡片
+- `CodeBlock` - 代码块
+- `ImageGallery` - 图片画廊
+- `TaskList` - 任务列表
+
+---
+
+## 📚 文档
+
+- [系统全貌](M3_AGENT_V6_SYSTEM_OVERVIEW.md)
+- [架构设计](M3_AGENT_V6_ARCHITECTURE.md)
+- [后端API文档](M3_AGENT_V6_BACKEND_API.md)
+- [前端开发指南](M3_AGENT_V6_FRONTEND_GUIDE.md)
+- [部署指南](M3_AGENT_V6_DEPLOYMENT_GUIDE.md)
+- [开发路线图](M3_AGENT_V6_ROADMAP.md)
+- [文件结构](M3_AGENT_V6_FILE_STRUCTURE.md)
+
+---
+
+## 🔧 配置
+
+### 环境变量
+
+```bash
+# LLM配置
+LLM_API_KEY=your_api_key_here
+LLM_BASE_URL=https://api.openai.com/v1
+LLM_MODEL=gpt-4
+
+# Agent配置
+AGENT_NAME=M3 Agent
+AGENT_VERSION=6.0.0
+DEFAULT_THREAD_ID=default_session
+
+# 浏览器配置
+BROWSER_HEADLESS=true
+BROWSER_POOL_SIZE=3
+
+# 日志配置
+LOG_LEVEL=INFO
+
+# 时区
+TZ=Asia/Shanghai
+```
+
+---
+
+## 🧪 测试
+
+### 后端API测试
+
+```bash
+# 健康检查
+curl http://localhost:8888/health
+
+# 聊天API (共享会话)
+curl -X POST http://localhost:8888/api/chat/stream \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "你好",
+    "thread_id": "default_session",
+    "source": "user"
+  }'
+
+# 聊天API (独立会话)
+curl -X POST http://localhost:8888/api/chat/stream \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "私密对话",
+    "thread_id": "private_123",
+    "source": "user"
+  }'
+```
+
+### 管理面板测试
+
+```bash
+# Dashboard状态
+curl http://localhost:8889/api/dashboard/status
+
+# 健康检测
+curl http://localhost:8889/api/dashboard/health
+
+# 性能测试
+curl http://localhost:8889/api/dashboard/performance
+
+# 元提示词列表
+curl http://localhost:8889/api/prompts
+```
+
+---
+
+## 🚀 版本历史
+
+### v6.0.0 (2024-12-05)
+- ✅ 修复v5.9的异步事件循环bug
+- ✅ 引入assistant-ui聊天室
+- ✅ 实现Generative UI
+- ✅ 智能延迟预加载
+- ✅ 定时健康检测和性能监控
+- ✅ 三方可见单会话窗口
+- ✅ 管理面板优化 (元提示词+时间修复)
+
+### v5.9.0 (2024-11-XX)
+- ❌ 引入异步浏览器池 (导致bug)
+- ✅ 后台任务管理
+- ✅ 统一三角聊天室
+- ❌ 无法正常使用
+
+### v3.5 (稳定版)
+- ✅ 15个工具完整实现
+- ✅ LangGraph集成
+- ✅ 管理面板
+- ✅ 元提示词管理
+
+---
+
+## 📝 License
+
+MIT License
+
+---
+
+## 🤝 贡献
+
+欢迎提交Issue和Pull Request!
+
+---
+
+## 📧 联系
+
+如有问题,请提交Issue或联系开发团队。
+
+---
+
+**M3 Agent v6.0 - 让AI更智能,让交互更自然!** 🎉

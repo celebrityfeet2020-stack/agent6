@@ -1,6 +1,6 @@
 """
-M3 Agent v5.1 - Startup Event Handler
-Initializes browser pool and tools in FastAPI startup event
+M3 Agent v5.9.1 - Startup Event Handler (FIXED)
+Initializes browser pool and tools - synchronous version
 """
 
 from app.core.browser_pool import get_browser_pool
@@ -10,23 +10,22 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-async def initialize_browser_pool_and_tools():
+def initialize_browser_pool_and_tools():
     """
-    Initialize browser pool and tools in FastAPI startup event.
+    Initialize browser pool and tools.
     
-    v5.1: Moved from module-level to startup event to avoid event loop conflicts.
-    This ensures browser pool is pre-loaded into memory but doesn't conflict with
-    admin_app's event loop.
+    v5.9.1 FIX: Changed to synchronous to avoid event loop conflicts.
+    Browser pool is pre-loaded into memory using sync API.
     
     Returns:
         tuple: (browser_pool, tools list)
     """
     logger.info("[Startup] Initializing browser pool...")
     
-    # Initialize browser pool (async)
+    # Initialize browser pool (sync)
     browser_pool = get_browser_pool(headless=True)
-    await browser_pool.start()  # Explicitly start to pre-load into memory
-    logger.info("✅ Browser pool pre-loaded into memory (v5.2)")
+    browser_pool.start()  # Explicitly start to pre-load into memory
+    logger.info("✅ Browser pool pre-loaded into memory (v5.9.1 FIXED - sync mode)")
     
     # Initialize all 15 tools with browser pool
     tools = [
@@ -47,6 +46,6 @@ async def initialize_browser_pool_and_tools():
         FileSyncTool(),
     ]
     
-    logger.info(f"✅ {len(tools)} tools initialized with browser pool (v5.1)")
+    logger.info(f"✅ {len(tools)} tools initialized with browser pool (v5.9.1 FIXED)")
     
     return browser_pool, tools

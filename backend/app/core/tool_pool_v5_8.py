@@ -158,12 +158,12 @@ class EnhancedToolPool:
     async def _load_whisper(self):
         """加载Whisper模型（v5.8新增）"""
         try:
-            logger.info("🎤 Loading Whisper model (medium)...")
+            logger.info("🎤 Loading Whisper model (small)...")
             start = datetime.now()
             
             import whisper
-            # 使用medium模型（平衡速度和精度）
-            self.whisper_model = whisper.load_model("medium")
+            # 使用small模型（已在Dockerfile预下载，244MB）
+            self.whisper_model = whisper.load_model("small")
             
             self.whisper_load_time = (datetime.now() - start).total_seconds()
             self.whisper_loaded = True
@@ -308,7 +308,7 @@ class EnhancedToolPool:
             logger.warning("Whisper model not pre-loaded, creating on demand...")
             try:
                 import whisper
-                self.whisper_model = whisper.load_model("medium")
+                self.whisper_model = whisper.load_model("small")
                 self.whisper_loaded = True
                 logger.info("✅ Whisper model loaded on demand")
             except Exception as e:

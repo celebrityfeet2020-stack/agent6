@@ -1,5 +1,5 @@
 """FastAPI Backend for M3 Agent System
-M3 Agent System v5.7.1 - Main Application
+M3 Agent System v5.9.0 - Main Application
 重大性能优化：全局浏览器池 + 模型预加载
 完整的 Agent 工作流，支持工具调用和 OpenAI 兼容接口
 
@@ -64,8 +64,8 @@ from app.websocket_manager import manager as ws_manager
 
 app = FastAPI(
     title="Agent System",
-    version="5.8.0",
-    description="M3 Agent v5.8 - Enhanced Tool Pool: Pre-load ALL tools (OCR+Whisper+CV+Docker) into 512GB memory. 增强版工具池：预加载所有工具到内存。支持思维链+工具链、三角聊天室、SSE流式输出、工具调用、RPA自动化、多轮对话和性能监控"
+    version="5.9.0",
+    description="M3 Agent v5.9.0 - Background Tasks Manager: Periodic health checks (tool pool + performance test + API check). 后台任务管理器：定期健康检查（工具池预加载 + 性能测试 + API检测）。支持思维链+工具链、三角聊天室、SSE流式输出、工具调用、RPA自动化、多轮对话和性能监控"
 )
 
 app.add_middleware(
@@ -101,21 +101,18 @@ async def startup_event():
     global browser_pool, tools, llm_with_tools, app_graph
     from app.core.startup import initialize_browser_pool_and_tools
     
-    # v5.8: Initialize enhanced tool pool (pre-load ALL heavy resources)
-    logger.info("Initializing enhanced tool pool (v5.8)...")
-    try:
-        from app.core.tool_pool_v5_8 import enhanced_tool_pool
-        await enhanced_tool_pool.initialize()
-    except Exception as e:
-        logger.warning(f"Failed to initialize v5.8 tool pool: {e}")
-        logger.warning("Falling back to v5.7 tool pool...")
-        await tool_pool.initialize()
+    # v5.9: Tool pool will be loaded by background tasks (30 minutes after startup)
+    logger.info("Tool pool will be loaded in background (30 minutes delay)")
     
     # Initialize browser pool and tools
     browser_pool, tools = await initialize_browser_pool_and_tools()
     
     # Bind tools to LLM
     llm_with_tools = llm.bind_tools(tools)
+    
+    # v5.9: Start background tasks manager
+    from app.core.background_tasks import background_tasks_manager
+    await background_tasks_manager.start()
     
     # Compile workflow (moved from module level to avoid using None llm_with_tools)
     from langgraph.checkpoint.memory import MemorySaver
@@ -150,9 +147,9 @@ app.include_router(langgraph_router)
 from app.api.streaming import router as streaming_router
 app.include_router(streaming_router)
 
-# v5.8: 注册三角聊天室API路由（人在回路监督）
-from app.api.chat_room import router as chat_room_router
-app.include_router(chat_room_router)
+# v5.9: 注册统一三角聊天室API路由（默认统一界面，三方可见）
+from app.api.unified_chat_room import router as unified_chat_room_router
+app.include_router(unified_chat_room_router)
 
 # ============================================
 # Initialize LLM and Tools
@@ -317,7 +314,7 @@ class OpenAIModelsResponse(BaseModel):
 @app.get("/")
 async def root():
     return {
-        "status": "M3 Agent System v5.7.1 Running",
+        "status": "M3 Agent System v5.9.0 Running",
         "tools": len(tools),
         "features": ["Agent Workflow", "Tool Calling", "OpenAI Compatible"]
     }
@@ -731,7 +728,12 @@ logger.info("✓ Tool pool ready for initialization")
 atexit.register(stop_memory_sync)
 atexit.register(shutdown_browser_pool)  # v5.0: Shutdown browser pool on exit
 atexit.register(lambda: asyncio.run(tool_pool.shutdown()))  # v5.7: Shutdown tool pool
-logger.info("✓ Shutdown hooks registered (memory sync + browser pool + tool pool)")
+
+# v5.9: Shutdown background tasks manager
+from app.core.background_tasks import background_tasks_manager
+atexit.register(lambda: asyncio.run(background_tasks_manager.stop()))
+
+logger.info("✓ Shutdown hooks registered (memory sync + browser pool + tool pool + background tasks)")
 
 # ============================================
 # Main Entry Point

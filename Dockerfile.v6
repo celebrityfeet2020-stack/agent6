@@ -1,0 +1,153 @@
+# M3 Agent System v6.0 - Optimized Dockerfile
+# 预下载所有模型和依赖,避免运行时下载
+
+# ============================================
+# Stage 1: 前端构建
+# ============================================
+FROM node:22-alpine AS frontend-builder
+
+WORKDIR /app/chatroom_ui
+
+# 复制前端代码
+COPY chatroom_ui/package.json chatroom_ui/pnpm-lock.yaml* ./
+COPY chatroom_ui/ ./
+
+# 安装pnpm并构建
+RUN npm install -g pnpm && \
+    pnpm install && \
+    pnpm run build
+
+# ============================================
+# Stage 2: Python基础镜像 + 系统依赖
+# ============================================
+FROM python:3.11-slim AS base
+
+# 设置环境变量
+ENV PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    TZ=Asia/Shanghai \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+# 安装系统依赖
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # 基础工具
+    curl wget git ca-certificates \
+    # Playwright依赖
+    libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 \
+    libcups2 libdrm2 libdbus-1-3 libxkbcommon0 libxcomposite1 \
+    libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 \
+    libpango-1.0-0 libcairo2 \
+    # OpenCV依赖
+    libgl1-mesa-glx libglib2.0-0 \
+    # FFmpeg (用于音频处理)
+    ffmpeg \
+    # Tesseract OCR
+    tesseract-ocr tesseract-ocr-chi-sim tesseract-ocr-eng \
+    # 清理
+    && rm -rf /var/lib/apt/lists/*
+
+# ============================================
+# Stage 3: Python依赖安装
+# ============================================
+FROM base AS python-deps
+
+WORKDIR /app
+
+# 复制requirements.txt
+COPY requirements.txt ./
+
+# 安装Python依赖
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# ============================================
+# Stage 4: 模型和浏览器预下载
+# ============================================
+FROM python-deps AS models
+
+WORKDIR /app
+
+# 1. 安装Playwright浏览器 (Chromium)
+RUN playwright install chromium && \
+    playwright install-deps chromium
+
+# 2. 预下载Whisper模型 (small)
+RUN python3 -c "import whisper; whisper.load_model('small')"
+
+# 3. 预下载OpenCV Haar Cascade模型
+RUN python3 -c "import cv2; \
+    cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'); \
+    cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')"
+
+# 4. 预下载NLTK数据 (如果需要)
+RUN python3 -c "import nltk; \
+    nltk.download('punkt', quiet=True); \
+    nltk.download('stopwords', quiet=True)"
+
+# 5. 验证所有依赖
+RUN python3 -c "import playwright; import whisper; import cv2; import nltk; print('All models loaded successfully!')"
+
+# ============================================
+# Stage 5: 最终镜像
+# ============================================
+FROM models AS final
+
+WORKDIR /app
+
+# 复制后端代码
+COPY app/ ./app/
+COPY main.py admin_app.py ./
+COPY config/ ./config/
+COPY admin_ui/ ./admin_ui/
+
+# 复制backend目录 (如果需要)
+COPY backend/ ./backend/
+
+# 从前端构建阶段复制静态文件
+COPY --from=frontend-builder /app/chatroom_ui/dist ./chatroom_ui_dist
+
+# 创建必要的目录
+RUN mkdir -p /app/data /app/logs /app/uploads
+
+# 暴露端口
+EXPOSE 8888 8889
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8888/health || exit 1
+
+# 启动脚本
+COPY <<'EOF' /app/start.sh
+#!/bin/bash
+set -e
+
+echo "=== M3 Agent System v6.0 Starting ==="
+echo "Time: $(date)"
+echo "Timezone: $TZ"
+
+# 启动main.py (Agent API)
+echo "Starting Agent API on port 8888..."
+python3 main.py &
+MAIN_PID=$!
+
+# 等待main.py启动
+sleep 5
+
+# 启动admin_app.py (管理面板 + 聊天室)
+echo "Starting Admin App on port 8889..."
+python3 admin_app.py &
+ADMIN_PID=$!
+
+# 等待进程
+echo "=== M3 Agent System v6.0 Started ==="
+echo "Agent API: http://localhost:8888"
+echo "Chat Room: http://localhost:8889"
+echo "Admin Panel: http://localhost:8889/admin"
+
+wait $MAIN_PID $ADMIN_PID
+EOF
+
+RUN chmod +x /app/start.sh
+
+# 启动
+CMD ["/app/start.sh"]

@@ -59,4 +59,3 @@ psutil==6.1.0
 
 # RPA工具
 pyautogui==0.9.54
-nest-asyncio==1.6.0

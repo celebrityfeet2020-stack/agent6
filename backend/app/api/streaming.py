@@ -186,7 +186,15 @@ async def stream_agent_response_with_enhanced_thought_chain(
     try:
         # Step 1: 理解任务
         if enable_enhanced_thought_chain:
-            user_message = input_data.get("messages", [{}])[-1].get("content", "")
+            messages = input_data.get("messages", [])
+            if messages:
+                last_msg = messages[-1]
+                if isinstance(last_msg, dict):
+                    user_message = last_msg.get("content", "")
+                else:
+                    user_message = getattr(last_msg, "content", "")
+            else:
+                user_message = ""
             yield SSEEventFormatter.format_thought(
                 f"正在理解用户需求：{user_message[:50]}...",
                 metadata={"step": "understanding", "thread_id": thread_id}
@@ -226,15 +234,21 @@ async def stream_agent_response_with_enhanced_thought_chain(
                         
                         # 处理AI消息
                         if isinstance(last_message, AIMessage) or (isinstance(last_message, dict) and last_message.get("type") == "ai"):
-                            content = last_message.content if hasattr(last_message, "content") else last_message.get("content", "")
-                            
-                            # 检查是否有工具调用
-                            tool_calls = getattr(last_message, "tool_calls", None) or last_message.get("tool_calls", [])
+                            # 安全获取content
+                            if isinstance(last_message, dict):
+                                content = last_message.get("content", "")
+                                tool_calls = last_message.get("tool_calls", [])
+                            else:
+                                content = getattr(last_message, "content", "")
+                                tool_calls = getattr(last_message, "tool_calls", [])
                             
                             if tool_calls:
                                 # Step 2: 选择工具
                                 if enable_enhanced_thought_chain and not tool_selection_sent:
-                                    tool_names = [tc.get("name", "unknown") for tc in tool_calls]
+                                    tool_names = [
+                                        tc.get("name", "unknown") if isinstance(tc, dict) else getattr(tc, "name", "unknown")
+                                        for tc in tool_calls
+                                    ]
                                     yield SSEEventFormatter.format_thought(
                                         f"选择工具: {', '.join(tool_names)}",
                                         metadata={"step": "tool_selection", "tools": tool_names}
@@ -243,9 +257,15 @@ async def stream_agent_response_with_enhanced_thought_chain(
                                 
                                 # 发送工具调用事件
                                 for tool_call in tool_calls:
-                                    tool_name = tool_call.get("name", "unknown")
-                                    tool_input = tool_call.get("args", {})
-                                    tool_call_id = tool_call.get("id", str(uuid.uuid4()))
+                                    # 安全获取tool_call属性
+                                    if isinstance(tool_call, dict):
+                                        tool_name = tool_call.get("name", "unknown")
+                                        tool_input = tool_call.get("args", {})
+                                        tool_call_id = tool_call.get("id", str(uuid.uuid4()))
+                                    else:
+                                        tool_name = getattr(tool_call, "name", "unknown")
+                                        tool_input = getattr(tool_call, "args", {})
+                                        tool_call_id = getattr(tool_call, "id", str(uuid.uuid4()))
                                     
                                     yield SSEEventFormatter.format_tool_call(
                                         tool_name=tool_name,
@@ -279,8 +299,13 @@ async def stream_agent_response_with_enhanced_thought_chain(
                         
                         # 处理工具消息
                         elif isinstance(last_message, ToolMessage) or (isinstance(last_message, dict) and last_message.get("type") == "tool"):
-                            tool_output = last_message.content if hasattr(last_message, "content") else last_message.get("content", "")
-                            tool_call_id = last_message.tool_call_id if hasattr(last_message, "tool_call_id") else last_message.get("tool_call_id", "")
+                            # 安全获取tool相关属性
+                            if isinstance(last_message, dict):
+                                tool_output = last_message.get("content", "")
+                                tool_call_id = last_message.get("tool_call_id", "")
+                            else:
+                                tool_output = getattr(last_message, "content", "")
+                                tool_call_id = getattr(last_message, "tool_call_id", "")
                             
                             # 发送工具结果事件
                             yield SSEEventFormatter.format_tool_result(
@@ -425,17 +450,26 @@ async def stream_agent_response(
                         
                         # 处理AI消息
                         if isinstance(last_message, AIMessage) or (isinstance(last_message, dict) and last_message.get("type") == "ai"):
-                            content = last_message.content if hasattr(last_message, "content") else last_message.get("content", "")
-                            
-                            # 检查是否有工具调用
-                            tool_calls = getattr(last_message, "tool_calls", None) or last_message.get("tool_calls", [])
+                            # 安全获取content
+                            if isinstance(last_message, dict):
+                                content = last_message.get("content", "")
+                                tool_calls = last_message.get("tool_calls", [])
+                            else:
+                                content = getattr(last_message, "content", "")
+                                tool_calls = getattr(last_message, "tool_calls", [])
                             
                             if tool_calls:
                                 # 发送工具调用事件
                                 for tool_call in tool_calls:
-                                    tool_name = tool_call.get("name", "unknown")
-                                    tool_input = tool_call.get("args", {})
-                                    tool_call_id = tool_call.get("id", str(uuid.uuid4()))
+                                    # 安全获取tool_call属性
+                                    if isinstance(tool_call, dict):
+                                        tool_name = tool_call.get("name", "unknown")
+                                        tool_input = tool_call.get("args", {})
+                                        tool_call_id = tool_call.get("id", str(uuid.uuid4()))
+                                    else:
+                                        tool_name = getattr(tool_call, "name", "unknown")
+                                        tool_input = getattr(tool_call, "args", {})
+                                        tool_call_id = getattr(tool_call, "id", str(uuid.uuid4()))
                                     
                                     yield SSEEventFormatter.format_tool_call(
                                         tool_name=tool_name,
@@ -462,8 +496,13 @@ async def stream_agent_response(
                         
                         # 处理工具消息
                         elif isinstance(last_message, ToolMessage) or (isinstance(last_message, dict) and last_message.get("type") == "tool"):
-                            tool_output = last_message.content if hasattr(last_message, "content") else last_message.get("content", "")
-                            tool_call_id = last_message.tool_call_id if hasattr(last_message, "tool_call_id") else last_message.get("tool_call_id", "")
+                            # 安全获取tool相关属性
+                            if isinstance(last_message, dict):
+                                tool_output = last_message.get("content", "")
+                                tool_call_id = last_message.get("tool_call_id", "")
+                            else:
+                                tool_output = getattr(last_message, "content", "")
+                                tool_call_id = getattr(last_message, "tool_call_id", "")
                             
                             # 发送工具结果事件
                             yield SSEEventFormatter.format_tool_result(
