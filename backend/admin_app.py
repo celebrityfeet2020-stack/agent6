@@ -362,6 +362,10 @@ async def dashboard_performance():
 from app.api.unified_chat_room import router as unified_chat_room_router
 admin_app.include_router(unified_chat_room_router)
 
+# Chatroom SSE Stream API (v6.4)
+from chatroom_api import router as chatroom_api_router
+admin_app.include_router(chatroom_api_router)
+
 # ============================================
 # Prompt Management API
 # ============================================
