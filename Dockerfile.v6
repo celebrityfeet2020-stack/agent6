@@ -74,13 +74,8 @@ RUN python3 -c "import cv2; \
     cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'); \
     cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')"
 
-# 4. 预下载NLTK数据 (如果需要)
-RUN python3 -c "import nltk; \
-    nltk.download('punkt', quiet=True); \
-    nltk.download('stopwords', quiet=True)"
-
-# 5. 验证所有依赖
-RUN python3 -c "import playwright; import whisper; import cv2; import nltk; print('All models loaded successfully!')"
+# 4. 验证所有依赖
+RUN python3 -c "import playwright; import whisper; import cv2; print('All models loaded successfully!')"
 
 # ============================================
 # Stage 5: 最终镜像
