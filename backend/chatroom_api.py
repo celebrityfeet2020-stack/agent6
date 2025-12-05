@@ -15,8 +15,8 @@ class ChatRequest(BaseModel):
     message: str
     user_id: str = "anonymous"
 
-@router.post("/api/chat/stream")
-async def chat_stream(request: ChatRequest):
+@router.get("/api/chat/stream")
+async def chat_stream(message: str, user_id: str = "anonymous"):
     """
     SSE流式聊天端点
     前端通过EventSource连接此端点
@@ -39,7 +39,7 @@ async def chat_stream(request: ChatRequest):
             
             # 构造输入
             input_data = {
-                "messages": [{"role": "user", "content": request.message}]
+                "messages": [{"role": "user", "content": message}]
             }
             
             # 流式执行workflow
