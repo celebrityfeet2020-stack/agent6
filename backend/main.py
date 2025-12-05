@@ -59,15 +59,16 @@ import os
 from app.websocket_manager import manager as ws_manager
 
 # ============================================
-# Global Application State (v6.3.2)
+# Global Application State (v6.4)
 # ============================================
-# 使用字典存储全局状态,解决background_tasks更新全局变量失效的问题
-app_state = {
-    "browser_pool": None,
-    "tools": [],
-    "llm_with_tools": None,
-    "app_graph": None
-}
+# 使用单例StateManager,确保跨模块状态共享
+from app.core.state_manager import StateManager
+
+state_mgr = StateManager()
+
+# 向后兼容:保留app_state变量名(但实际使用state_mgr)
+# 这样可以减少代码修改量
+app_state = state_mgr._state  # 直接引用内部字典
 
 # ============================================
 # FastAPI Application Setup
@@ -766,3 +767,23 @@ if __name__ == "__main__":
         log_level="info"
         # No loop="asyncio" - let uvicorn use uvloop by default
     )
+
+
+# ============================================
+# 临时调试端点 (v6.3.2 debug)
+# ============================================
+
+@app.get("/debug/app_state")
+async def debug_app_state():
+    """调试: 检查app_state的实际内容"""
+    return {
+        "app_state_id": id(app_state),
+        "browser_pool": app_state["browser_pool"] is not None,
+        "tools_count": len(app_state["tools"]),
+        "tools_sample": [
+            {"name": t.name, "description": t.description[:50]}
+            for t in app_state["tools"][:3]
+        ] if app_state["tools"] else [],
+        "llm_with_tools": app_state["llm_with_tools"] is not None,
+        "app_graph": app_state["app_graph"] is not None,
+    }

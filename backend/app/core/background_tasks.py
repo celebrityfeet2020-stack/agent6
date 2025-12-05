@@ -69,11 +69,18 @@ class BackgroundTasksManager:
             
             browser_pool, tools = await initialize_browser_pool_and_tools()
             
-            # v6.3.2: 更新app_state字典
-            from main import app_state, llm
-            app_state["browser_pool"] = browser_pool
-            app_state["tools"] = tools
-            app_state["llm_with_tools"] = llm.bind_tools(tools)
+            # v6.4: 使用StateManager更新状态
+            from app.core.state_manager import StateManager
+            from main import llm
+            
+            state_mgr = StateManager()
+            state_mgr.set("browser_pool", browser_pool)
+            state_mgr.set("tools", tools)
+            state_mgr.set("llm_with_tools", llm.bind_tools(tools))
+            state_mgr.set("tools_loaded", True)
+            
+            import datetime
+            state_mgr.set("tools_load_time", datetime.datetime.now().isoformat())
             
             # 重新编译workflow以使用新的llm_with_tools
             from langgraph.checkpoint.memory import MemorySaver
@@ -94,7 +101,7 @@ class BackgroundTasksManager:
             )
             workflow.add_edge("tools", "agent")
             checkpointer = MemorySaver()
-            app_state["app_graph"] = workflow.compile(checkpointer=checkpointer)
+            state_mgr.set("app_graph", workflow.compile(checkpointer=checkpointer))
             
             logger.info(f"✅ Browser pool and {len(tools)} tools initialized successfully")
             
