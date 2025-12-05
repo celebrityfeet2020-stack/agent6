@@ -14,10 +14,10 @@ class Settings(BaseSettings):
     
     # API Settings
     API_HOST: str = "0.0.0.0"
-    API_PORT: int = 8000
+    API_PORT: int = 8888
     
     # Admin Settings
-    ADMIN_PORT: int = 8002
+    ADMIN_PORT: int = 8889
     
     class Config:
         env_file = ".env"

@@ -14,13 +14,14 @@ services:
       - "8889:8889"  # Admin Panel + Chat Room
     
     environment:
-      # LLM配置
-      - LLM_API_KEY=${LLM_API_KEY:-your_api_key_here}
-      - LLM_BASE_URL=${LLM_BASE_URL:-https://api.openai.com/v1}
-      - LLM_MODEL=${LLM_MODEL:-gpt-4}
+      # LLM配置 (本地LM Studio)
+      - LLM_BASE_URL=${LLM_BASE_URL:-http://192.168.9.125:8000/v1}
+      - LLM_MODEL=${LLM_MODEL:-minimax/minimax-m2}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.7}
+      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-4096}
       
       # Agent配置
-      - AGENT_NAME=M3 Agent
+      - AGENT_NAME=A6 System
       - AGENT_VERSION=6.0.0
       - DEFAULT_THREAD_ID=default_session
       

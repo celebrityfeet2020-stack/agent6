@@ -99,6 +99,12 @@ jobs:
             junpeng999/agent6:latest-arm64
             junpeng999/agent6:v6.0.0-arm64
           build-args: |
+            BUILDKIT_INLINE_CACHE=1
+          cache-from: type=registry,ref=junpeng999/agent6:buildcache-arm64
+          cache-to: type=registry,ref=junpeng999/agent6:buildcache-arm64,mode=max
+          # ARM64构建需要更长时间
+          no-cache: false
+          build-args: |
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
             VCS_REF=${{ github.sha }}
             VERSION=v6.0.0

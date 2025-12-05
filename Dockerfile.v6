@@ -28,8 +28,9 @@ ENV PYTHONUNBUFFERED=1 \
     TZ=Asia/Shanghai \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-# 安装系统依赖
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# 安装系统依赖 (ARM64兼容)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     # 基础工具
     curl wget git ca-certificates \
     # Playwright依赖
@@ -42,9 +43,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # FFmpeg (用于音频处理)
     ffmpeg \
     # Tesseract OCR
-    tesseract-ocr tesseract-ocr-chi-sim tesseract-ocr-eng \
+    tesseract-ocr tesseract-ocr-chi-sim tesseract-ocr-eng && \
     # 清理
-    && rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # ============================================
 # Stage 3: Python依赖安装
