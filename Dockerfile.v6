@@ -20,7 +20,7 @@ RUN npm install -g pnpm && \
 # ============================================
 # Stage 2: Python基础镜像 + 系统依赖
 # ============================================
-FROM python:3.11 AS base
+FROM mcr.microsoft.com/playwright/python:v1.49.1-jammy AS base
 
 # 设置环境变量
 ENV PYTHONUNBUFFERED=1 \
@@ -28,19 +28,17 @@ ENV PYTHONUNBUFFERED=1 \
     TZ=Asia/Shanghai \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-# 安装系统依赖 (ARM64兼容)
-# 包括: 基础工具, Playwright依赖, OpenCV依赖, FFmpeg, Tesseract OCR
+# 安装额外系统依赖 (Playwright镜像已包含大部分依赖)
+# 只需要安装: FFmpeg, Tesseract OCR, OpenCV依赖
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    curl wget git ca-certificates \
-    libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 \
-    libcups2 libdrm2 libdbus-1-3 libxkbcommon0 libxcomposite1 \
-    libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 \
-    libpango-1.0-0 libcairo2 \
-    libgl1-mesa-glx libglib2.0-0 \
     ffmpeg \
-    tesseract-ocr tesseract-ocr-chi-sim tesseract-ocr-eng && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    tesseract-ocr tesseract-ocr-eng tesseract-ocr-chi-sim tesseract-ocr-chi-tra \
+    libtesseract-dev \
+    libgl1-mesa-glx libglib2.0-0 \
+    libsm6 libxext6 libxrender-dev libgomp1 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # ============================================
 # Stage 3: Python依赖安装
@@ -63,9 +61,7 @@ FROM python-deps AS models
 
 WORKDIR /app
 
-# 1. 安装Playwright浏览器 (Chromium)
-RUN playwright install chromium && \
-    playwright install-deps chromium
+# 1. Playwright浏览器已包含在基础镜像中,无需额外安装
 
 # 2. 预下载Whisper模型 (small)
 RUN python3 -c "import whisper; whisper.load_model('small')"
