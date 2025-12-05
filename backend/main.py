@@ -101,13 +101,15 @@ async def startup_event():
     global browser_pool, tools, llm_with_tools, app_graph
     from app.core.startup import initialize_browser_pool_and_tools
     
-    # v5.9: Tool pool will be loaded by background tasks (30 minutes after startup)
-    logger.info("Tool pool will be loaded in background (30 minutes delay)")
+    # v6.1: Browser pool and tools will be loaded by background tasks (15 minutes after startup)
+    logger.info("[v6.1] Browser pool and tools will be loaded in background (15 minutes delay)")
+    logger.info("[v6.1] This avoids asyncio conflicts during startup")
     
-    # Initialize browser pool and tools
-    browser_pool, tools = await initialize_browser_pool_and_tools()
+    # Create empty tools list for now (will be populated by background tasks)
+    browser_pool = None
+    tools = []
     
-    # Bind tools to LLM
+    # Bind empty tools to LLM (will be updated by background tasks)
     llm_with_tools = llm.bind_tools(tools)
     
     # v5.9: Start background tasks manager
@@ -186,20 +188,27 @@ def load_system_prompt() -> str:
                 for prompt in prompts:
                     if prompt.get("is_active", False):
                         return prompt["prompt"]
-        # 默认提示词
-        return """你是 M3 Agent，一个功能强大的 AI 助手，拥有以下能力：
+        # 默认提示词 (v6.1: 添加VL模型支持说明)
+        return """你是 A6 System，一个功能强大的 AI Agent，拥有以下能力：
 
 1. **网络搜索和抓取**：使用 web_search 搜索信息，使用 web_scraper 抓取网页内容
 2. **浏览器自动化**：使用 browser_automation 进行复杂的网页交互
 3. **代码执行**：使用 code_executor 在安全沙盒中执行 Python/JavaScript/Bash 代码
 4. **文件操作**：使用 file_operations 读写文件
-5. **图像处理**：使用 image_ocr 识别图片文字，使用 image_analysis 分析图像
-6. **数据分析**：使用 data_analysis 处理和可视化数据
-7. **远程操作**：使用 ssh_tool 执行远程命令，使用 git_tool 管理代码仓库
-8. **API 调用**：使用 universal_api 调用任意 RESTful API
-9. **通讯**：使用 telegram_tool 发送 Telegram 消息
+5. **图像处理**：使用 image_ocr 识别图片文字 (支持中英日韩等多语言)，使用 image_analysis 分析图像 (人脸检测、物体识别等)
+6. **语音处理**：使用 speech_recognition_tool 转录音频 (支持中英日韩等多语言)
+7. **视频处理**：使用 video_analysis 分析视频内容
+8. **数据分析**：使用 data_analysis 处理和可视化数据
+9. **远程操作**：使用 ssh_tool 执行远程命令，使用 git_tool 管理代码仓库
+10. **API 调用**：使用 universal_api 调用任意 RESTful API
+11. **通讯**：使用 telegram_tool 发送 Telegram 消息
+12. **RPA自动化**：使用 rpa_tool 进行复杂的自动化流程
+13. **文件同步**：使用 file_sync_tool 同步文件到D5航母
 
 **工作原则**：
+- 默认使用工具处理多媒体内容，以确保结果的准确性和一致性
+- 如果你是多模态模型 (VL模型)，在简单的图片理解任务中 (如“这是什么？”)，你可以直接查看图片
+- 但对于需要精确结果的任务 (如OCR、人脸检测、语音转录)，仍应使用专业工具
 - 根据用户需求，主动选择合适的工具来完成任务
 - 如果一个工具不够，可以连续调用多个工具
 - 始终向用户解释你在做什么以及为什么这样做

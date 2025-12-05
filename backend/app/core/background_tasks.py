@@ -61,6 +61,32 @@ class BackgroundTasksManager:
     
 
     
+    async def _initialize_browser_and_tools(self):
+        """初始化浏览器池和工具 (v6.1)"""
+        try:
+            logger.info("🌐 Initializing browser pool and tools...")
+            from app.core.startup import initialize_browser_pool_and_tools
+            
+            browser_pool, tools = await initialize_browser_pool_and_tools()
+            
+            # 更新全局变量
+            import main
+            main.browser_pool = browser_pool
+            main.tools = tools
+            main.llm_with_tools = main.llm.bind_tools(tools)
+            
+            logger.info(f"✅ Browser pool and {len(tools)} tools initialized successfully")
+            
+            # 推送到聊天室
+            await self._send_chat_message(
+                f"✅ 浏览器池和工具初始化完成\n- 工具数量: {len(tools)}",
+                metadata={"type": "browser_tools_init"}
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize browser pool and tools: {e}", exc_info=True)
+            await self._send_chat_message(f"❌ 浏览器池初始化失败: {e}", metadata={"type": "error"})
+    
     async def _load_tool_pool(self):
         """预加载工具池"""
         try:
@@ -156,10 +182,13 @@ class BackgroundTasksManager:
             while True:
                 try:
                     logger.info("=" * 80)
-                    logger.info("🌊 Wave 1: Tool Pool + API Check [轻量级]")
+                    logger.info("🌊 Wave 1: Browser Pool + Tool Pool + API Check [轻量级]")
                     logger.info("=" * 80)
                     
-                    # 1. 预加载工具池
+                    # 1. 初始化浏览器池和工具 (v6.1)
+                    await self._initialize_browser_and_tools()
+                    
+                    # 2. 预加载工具池
                     await self._load_tool_pool()
                     
                     # 2. 模型API检测

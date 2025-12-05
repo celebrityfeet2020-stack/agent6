@@ -23,10 +23,10 @@ async def initialize_browser_pool_and_tools():
     """
     logger.info("[Startup] Initializing browser pool...")
     
-    # Initialize browser pool (async)
+    # v6.1: Get browser pool instance but don't start it yet
+    # Browser will be started lazily on first use to avoid asyncio conflicts
     browser_pool = get_browser_pool(headless=True)
-    await browser_pool.start()  # Explicitly start to pre-load into memory
-    logger.info("✅ Browser pool pre-loaded into memory (v5.2)")
+    logger.info("✅ Browser pool instance created (lazy initialization)")
     
     # Initialize all 15 tools with browser pool
     tools = [
@@ -47,6 +47,6 @@ async def initialize_browser_pool_and_tools():
         FileSyncTool(),
     ]
     
-    logger.info(f"✅ {len(tools)} tools initialized with browser pool (v5.1)")
+    logger.info(f"✅ {len(tools)} tools initialized with browser pool (v6.1 - lazy init)")
     
     return browser_pool, tools

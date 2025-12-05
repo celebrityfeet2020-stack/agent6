@@ -52,7 +52,8 @@ class BrowserPool:
     def _start_browser_sync(self):
         """Start browser in sync mode (runs in thread pool)."""
         try:
-            playwright = self._get_or_create_playwright()
+            # v6.1: Create playwright in dedicated thread to avoid asyncio conflict
+            playwright = sync_playwright().start()
             browser = playwright.chromium.launch(
                 headless=self.headless,
                 args=[

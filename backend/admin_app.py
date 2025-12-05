@@ -11,8 +11,9 @@ v5.5更新：基于v5.2稳定版本，实现三角聊天室，WebSocket实时推
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import httpx
@@ -48,6 +49,15 @@ admin_app.add_middleware(
 
 # 模板目录
 templates = Jinja2Templates(directory="/app/admin_ui/templates")
+
+# v6.1: 挂载聊天室UI静态文件
+import os
+chatroom_ui_dir = "/app/chatroom_ui_dist"
+if os.path.exists(chatroom_ui_dir):
+    admin_app.mount("/chatroom", StaticFiles(directory=chatroom_ui_dir, html=True), name="chatroom")
+    print(f"[Admin Panel] Chatroom UI mounted at /chatroom (from {chatroom_ui_dir})")
+else:
+    print(f"[Admin Panel] Warning: Chatroom UI directory not found: {chatroom_ui_dir}")
 
 # ============================================
 # Startup Event
@@ -170,6 +180,12 @@ async def get_available_models():
 async def dashboard(request: Request):
     """管理面板主页"""
     return templates.TemplateResponse("dashboard.html", {"request": request})
+
+@admin_app.get("/chat", response_class=HTMLResponse)
+async def chatroom_redirect():
+    """重定向到聊天室UI (v6.1)"""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/chatroom/")
 
 # ============================================
 # System Status API
