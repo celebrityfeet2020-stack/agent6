@@ -29,22 +29,17 @@ ENV PYTHONUNBUFFERED=1 \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 # 安装系统依赖 (ARM64兼容)
+# 包括: 基础工具, Playwright依赖, OpenCV依赖, FFmpeg, Tesseract OCR
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    # 基础工具
     curl wget git ca-certificates \
-    # Playwright依赖
     libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 \
     libcups2 libdrm2 libdbus-1-3 libxkbcommon0 libxcomposite1 \
     libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 \
     libpango-1.0-0 libcairo2 \
-    # OpenCV依赖
     libgl1-mesa-glx libglib2.0-0 \
-    # FFmpeg (用于音频处理)
     ffmpeg \
-    # Tesseract OCR
     tesseract-ocr tesseract-ocr-chi-sim tesseract-ocr-eng && \
-    # 清理
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # ============================================
