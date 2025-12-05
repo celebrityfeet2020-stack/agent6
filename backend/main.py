@@ -59,6 +59,17 @@ import os
 from app.websocket_manager import manager as ws_manager
 
 # ============================================
+# Global Application State (v6.3.2)
+# ============================================
+# 使用字典存储全局状态,解决background_tasks更新全局变量失效的问题
+app_state = {
+    "browser_pool": None,
+    "tools": [],
+    "llm_with_tools": None,
+    "app_graph": None
+}
+
+# ============================================
 # FastAPI Application Setup
 # ============================================
 
@@ -98,19 +109,18 @@ async def performance_tracking_middleware(request: Request, call_next):
 @app.on_event("startup")
 async def startup_event():
     """Initialize browser pool, tools, and workflow on application startup."""
-    global browser_pool, tools, llm_with_tools, app_graph
     from app.core.startup import initialize_browser_pool_and_tools
     
     # v6.3.2: Browser pool and tools will be loaded by background tasks (5 minutes after startup)
     logger.info("[v6.3.2] Browser pool and tools will be loaded in background (5 minutes delay)")
     logger.info("[v6.3.2] This avoids asyncio conflicts during startup")
     
-    # Create empty tools list for now (will be populated by background tasks)
-    browser_pool = None
-    tools = []
+    # Initialize app_state with empty values (will be populated by background tasks)
+    app_state["browser_pool"] = None
+    app_state["tools"] = []
     
     # Bind empty tools to LLM (will be updated by background tasks)
-    llm_with_tools = llm.bind_tools(tools)
+    app_state["llm_with_tools"] = llm.bind_tools(app_state["tools"])
     
     # v5.9: Start background tasks manager
     from app.core.background_tasks import background_tasks_manager
@@ -133,7 +143,7 @@ async def startup_event():
     )
     workflow.add_edge("tools", "agent")
     checkpointer = MemorySaver()
-    app_graph = workflow.compile(checkpointer=checkpointer)
+    app_state["app_graph"] = workflow.compile(checkpointer=checkpointer)
     
     logger.info("✅ Startup complete: browser pool, tools, and workflow ready")
 
@@ -171,8 +181,7 @@ from app.core.browser_pool import get_browser_pool
 browser_pool = None
 tools = []  # Will be initialized in startup event
 
-# v5.1: llm_with_tools will be set in startup event
-llm_with_tools = None
+# v6.3.2: llm_with_tools moved to app_state dictionary
 
 # ============================================
 # Agent Workflow (LangGraph)
@@ -228,9 +237,9 @@ def agent_node(state: MessagesState, config: dict) -> MessagesState:
         system_prompt = load_system_prompt()
         messages = [SystemMessage(content=system_prompt)] + messages
     
-    # 调用 LLM（带重试机制）
+    # 调用 LLM（带重试机制）(v6.3.2: 使用app_state)
     try:
-        response = llm_with_tools.with_retry(stop_after_attempt=3).invoke(messages, config=config)
+        response = app_state["llm_with_tools"].with_retry(stop_after_attempt=3).invoke(messages, config=config)
         return {"messages": [response]}
     except Exception as e:
         error_message = f"LLM 调用失败: {e}"
@@ -274,9 +283,8 @@ def tool_node_with_error_handling(state: MessagesState) -> MessagesState:
 
 tool_node = tool_node_with_error_handling
 
-# v5.1: Workflow compilation moved to startup event
-# This avoids using None llm_with_tools during module initialization
-app_graph = None  # Will be set in startup event
+# v6.3.2: app_graph moved to app_state dictionary
+# This allows background_tasks to update it properly
 
 # ============================================
 # Pydantic Models
@@ -366,9 +374,9 @@ async def agent_chat(request: ChatRequest):
         # 构建输入消息
         input_messages = [HumanMessage(content=request.message)]
         
-        # 调用 Agent 工作流
+        # 调用 Agent 工作流 (v6.3.2: 使用app_state)
         config = {"configurable": {"thread_id": request.thread_id}}
-        result = app_graph.invoke(
+        result = app_state["app_graph"].invoke(
             {"messages": input_messages},
             config=config
         )
@@ -438,14 +446,14 @@ async def simple_chat(request: ChatRequest):
 
 @app.get("/api/tools")
 async def list_tools():
-    """列出所有可用工具"""
+    """列出所有可用工具 (v6.3.2: 使用app_state)"""
     return {
         "tools": [
             {
                 "name": tool.name,
                 "description": tool.description
             }
-            for tool in tools
+            for tool in app_state["tools"]
         ]
     }
 
@@ -548,9 +556,9 @@ async def chat_completions(request: OpenAIChatRequest):
             elif msg.role == "assistant":
                 langchain_messages.append(AIMessage(content=msg.content or ""))
         
-        # 调用 Agent 工作流
+        # 调用 Agent 工作流 (v6.3.2: 使用app_state)
         config = {"configurable": {"thread_id": f"openai_{int(time.time())}"}}
-        result = app_graph.invoke(
+        result = app_state["app_graph"].invoke(
             {"messages": langchain_messages},
             config=config
         )
