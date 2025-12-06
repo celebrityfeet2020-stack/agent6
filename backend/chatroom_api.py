@@ -27,15 +27,14 @@ async def chat_stream(request: ChatRequest):
     """
     async def event_generator():
         try:
-            # 导入必要的模块
-            from app.core.state_manager import StateManager
+            # v6.5.6: 直接从 main.py 导入 app_state
+            from main import app_state
             
-            state_mgr = StateManager()
-            app_graph = state_mgr.get("app_graph")
+            app_graph = app_state.get("app_graph")
             
             if not app_graph:
                 # 如果workflow未初始化,返回错误
-                yield f"data: {json.dumps({'error': 'Agent未初始化,请等待5分钟'})}\n\n"
+                yield f"data: {json.dumps({'error': 'Agent未初始化,请等待5分钟', 'type': 'error'})}\n\n"
                 return
             
             # 发送开始事件

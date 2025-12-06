@@ -343,10 +343,12 @@ async def root():
 
 @app.get("/health")
 async def health():
+    # v6.5.6: 修复 - 从 app_state 读取 tools
+    actual_tools = app_state.get("tools", [])
     return {
         "status": "healthy",
         "llm_model": settings.LLM_MODEL,
-        "tools_count": len(tools)
+        "tools_count": len(actual_tools)
     }
 
 @app.post("/api/agent/chat", response_model=ChatResponse)
