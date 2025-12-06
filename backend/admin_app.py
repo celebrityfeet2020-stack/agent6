@@ -79,14 +79,23 @@ _agent_api_status_cache = {
     "last_check": "--"
 }
 
+# v6.5.5: 容器启动时间(北京时间)
+_container_start_time = None
+
 @admin_app.on_event("startup")
 async def startup_event():
     """启动时初始化性能监控"""
-    global _monitor_task, _scheduled_task
-    # v6.3: 初始化启动时间
+    global _monitor_task, _scheduled_task, _container_start_time
+    from beijing_time_utils import get_beijing_time, get_beijing_time_str
+    
+    # v6.5.5: 记录容器启动时间(北京时间)
+    _container_start_time = get_beijing_time()
+    print(f"[Admin Panel] 容器启动时间: {get_beijing_time_str()}")
+    
+    # v6.3: 初始化启动时间(向后兼容)
     from dashboard_apis import set_startup_time
-    from datetime import datetime
-    set_startup_time(datetime.now())
+    set_startup_time(_container_start_time)
+    
     print("[Admin Panel] Initializing performance monitoring...")
     # 立即更新一次性能数据
     await update_performance_cache()
@@ -105,7 +114,27 @@ async def startup_event():
 @admin_app.get("/health")
 async def health_check():
     """Docker健康检查端点"""
-    return {"status": "healthy", "service": "admin_panel", "version": "6.5.4"}
+    return {"status": "healthy", "service": "admin_panel", "version": "6.5.5"}
+
+@admin_app.get("/api/system/uptime")
+async def get_system_uptime():
+    """
+    v6.5.5: 获取系统运行时间(北京时间)
+    前端使用此端点获取启动时间,避免刷新页面重置
+    """
+    from beijing_time_utils import get_beijing_time
+    
+    if _container_start_time:
+        current_time = get_beijing_time()
+        uptime_seconds = int((current_time - _container_start_time).total_seconds())
+        return {
+            "start_time": _container_start_time.isoformat(),
+            "current_time": current_time.isoformat(),
+            "uptime_seconds": uptime_seconds,
+            "timezone": "Asia/Shanghai (UTC+8)"
+        }
+    else:
+        return {"error": "启动时间未记录"}
 
 # ============================================
 # v6.5.4: LLM模型检测端点（修复版）
@@ -145,35 +174,18 @@ async def get_llm_models():
                         "api_url": api_base,
                         "current_model": current_model,
                         "available_models": available_models,
-                        "status": "connected"
+                        "status": "connected",
+                        "readonly": True  # 标记为只读
                     }
             
-            # 如果/v1/models失败，尝试发送测试请求
-            test_response = await client.post(
-                f"{api_base}/chat/completions",
-                headers=headers,
-                json={
-                    "model": "minimax/minimax-m2",
-                    "messages": [{"role": "user", "content": "test"}],
-                    "max_tokens": 1
-                },
-                timeout=10.0
-            )
-            
-            if test_response.status_code == 200:
-                return {
-                    "api_url": api_base,
-                    "current_model": "minimax/minimax-m2",
-                    "available_models": ["minimax/minimax-m2"],
-                    "status": "connected"
-                }
-            
+            # 如果/v1/models失败,返回错误(不再尝试发送测试请求,避免修改模型)
             return {
                 "api_url": api_base,
                 "current_model": "unknown",
                 "available_models": [],
                 "status": "error",
-                "error": f"HTTP {test_response.status_code}"
+                "error": f"HTTP {response.status_code}",
+                "readonly": True  # 标记为只读
             }
             
     except Exception as e:
@@ -182,19 +194,21 @@ async def get_llm_models():
             "current_model": "unknown",
             "available_models": [],
             "status": "disconnected",
-            "error": str(e)
+            "error": str(e),
+            "readonly": True  # 标记为只读
         }
 
 # ============================================
 # v6.5.4: 定时任务系统（修复版）
 # ============================================
 
-async def update_agent_api_status():
+async def task_a_tools_and_api_check():
     """
-    更新Agent API状态
-    检查工具数量、配置模型等
+    任务A: 工具池+浏览器池+API检测
+    检查15个工具是否都在内存,如果缺失则记录警告
     """
     global _agent_api_status_cache
+    from beijing_time_utils import get_beijing_time_str
     
     try:
         # 检查Agent API的健康状态
@@ -203,16 +217,47 @@ async def update_agent_api_status():
             
             if response.status_code == 200:
                 data = response.json()
-                _agent_api_status_cache["tool_count"] = data.get("tool_count", 15)
-                _agent_api_status_cache["config_model"] = data.get("config_model", "minimax/minimax-m2")
-                _agent_api_status_cache["api_port"] = 8000
-                _agent_api_status_cache["last_check"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                print(f"[Scheduled Tasks] Agent API status updated: {_agent_api_status_cache}")
+                tool_count = data.get("tools_count", 0)
+                llm_model = data.get("llm_model", "unknown")
+                
+                # 期望15个工具
+                expected_tool_count = 15
+                status = "healthy" if tool_count == expected_tool_count else "warning"
+                
+                # 如果工具数量不对,记录警告
+                if tool_count < expected_tool_count:
+                    print(f"[Task A] ⚠️ 警告: 只有{tool_count}个工具,期望{expected_tool_count}个")
+                else:
+                    print(f"[Task A] ✅ 工具池正常: {tool_count}个工具已加载")
+                
+                _agent_api_status_cache = {
+                    "config_model": llm_model,
+                    "tool_count": tool_count,
+                    "expected_tool_count": expected_tool_count,
+                    "status": status,
+                    "api_port": 8000,
+                    "last_check": get_beijing_time_str()
+                }
+                
+                print(f"[Task A] 工具池+API检测完成: {_agent_api_status_cache}")
             else:
-                print(f"[Scheduled Tasks] Agent API health check failed: HTTP {response.status_code}")
+                print(f"[Task A] Agent API健康检查失败: HTTP {response.status_code}")
                 
     except Exception as e:
-        print(f"[Scheduled Tasks] Error updating Agent API status: {e}")
+        print(f"[Task A] 执行失败: {e}")
+
+async def task_b_model_and_api_performance():
+    """
+    任务B: 模型性能+API性能测试
+    """
+    from beijing_time_utils import get_beijing_time_str
+    
+    try:
+        print(f"[Task B] 开始性能测试 at {get_beijing_time_str()}")
+        await update_performance_cache()
+        print(f"[Task B] 性能测试完成 at {get_beijing_time_str()}")
+    except Exception as e:
+        print(f"[Task B] 执行失败: {e}")
 
 @admin_app.get("/api/agent-status")
 async def get_agent_api_status():
@@ -223,52 +268,46 @@ async def get_agent_api_status():
 
 async def scheduled_tasks_loop():
     """
-    v6.5.4: 定时任务循环（修复版）
-    - Agent API状态: 启动后5分钟，之后每30分钟
-    - 模型性能测试: 启动后20分钟，之后每15分钟
+    v6.5.5: 定时任务循环（修复版）
+    任务A: T+5min首次, 之后每30min (工具池+API检测)
+    任务B: T+20min首次, 之后每30min (模型性能测试)
+    两个任务错开15分钟
     """
-    global _last_agent_api_update, _last_performance_test
-    
-    from dashboard_apis import get_startup_time
+    from beijing_time_utils import get_beijing_time_str
     
     print("[Scheduled Tasks] Task loop started")
     
-    while True:
-        try:
-            now = datetime.now()
-            startup_time = get_startup_time()
-            elapsed_seconds = (now - startup_time).total_seconds()
+    try:
+        # 等待5分钟后首次执行任务A
+        print(f"[Scheduled Tasks] 等待5分钟后执行任务A... at {get_beijing_time_str()}")
+        await asyncio.sleep(300)  # 5分钟
+        await task_a_tools_and_api_check()
+        print(f"[Scheduled Tasks] ✅ 任务A首次执行完成 at {get_beijing_time_str()}")
+        
+        # 再等15分钟后首次执行任务B (总共20分钟)
+        print(f"[Scheduled Tasks] 等待15分钟后执行任务B... at {get_beijing_time_str()}")
+        await asyncio.sleep(900)  # 15分钟
+        await task_b_model_and_api_performance()
+        print(f"[Scheduled Tasks] ✅ 任务B首次执行完成 at {get_beijing_time_str()}")
+        
+        # 进入30分钟循环,两个任务错开15分钟
+        while True:
+            # 再等15分钟后执行任务A (距离上次任务A是30分钟)
+            print(f"[Scheduled Tasks] 等待15分钟后执行任务A... at {get_beijing_time_str()}")
+            await asyncio.sleep(900)  # 15分钟
+            await task_a_tools_and_api_check()
+            print(f"[Scheduled Tasks] ✅ 任务A执行完成 at {get_beijing_time_str()}")
             
-            # Agent API状态更新（启动后5分钟，之后每30分钟）
-            if _last_agent_api_update is None:
-                if elapsed_seconds >= 5 * 60:  # 5分钟
-                    print("[Scheduled Tasks] Running Agent API status update (first time)...")
-                    await update_agent_api_status()
-                    _last_agent_api_update = now
-            else:
-                if (now - _last_agent_api_update).total_seconds() >= 30 * 60:  # 30分钟
-                    print("[Scheduled Tasks] Running Agent API status update (periodic)...")
-                    await update_agent_api_status()
-                    _last_agent_api_update = now
+            # 再等15分钟后执行任务B (距离上次任务B是30分钟)
+            print(f"[Scheduled Tasks] 等待15分钟后执行任务B... at {get_beijing_time_str()}")
+            await asyncio.sleep(900)  # 15分钟
+            await task_b_model_and_api_performance()
+            print(f"[Scheduled Tasks] ✅ 任务B执行完成 at {get_beijing_time_str()}")
             
-            # 模型性能测试（启动后20分钟，之后每15分钟）
-            if _last_performance_test is None:
-                if elapsed_seconds >= 20 * 60:  # 20分钟
-                    print("[Scheduled Tasks] Running model performance test (first time)...")
-                    await update_performance_cache()
-                    _last_performance_test = now
-            else:
-                if (now - _last_performance_test).total_seconds() >= 15 * 60:  # 15分钟
-                    print("[Scheduled Tasks] Running model performance test (periodic)...")
-                    await update_performance_cache()
-                    _last_performance_test = now
-            
-            # 每分钟检查一次
-            await asyncio.sleep(60)
-            
-        except Exception as e:
-            print(f"[Scheduled Tasks] Error: {e}")
-            await asyncio.sleep(60)
+    except Exception as e:
+        print(f"[Scheduled Tasks] Error: {e}")
+        # 出错后等待1分钟再重试
+        await asyncio.sleep(60)
 
 # ============================================
 # Dashboard API Endpoints
@@ -319,12 +358,12 @@ admin_app.include_router(chatroom_api_router)
 @admin_app.get("/", response_class=HTMLResponse)
 async def admin_panel(request: Request):
     """管理面板首页"""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse("dashboard.html", {"request": request})
 
 @admin_app.get("/admin", response_class=HTMLResponse)
 async def admin_panel_alt(request: Request):
     """管理面板首页（备用路径）"""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse("dashboard.html", {"request": request})
 
 # ============================================
 # Main Entry Point

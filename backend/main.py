@@ -164,6 +164,10 @@ app.include_router(streaming_router)
 from app.api.unified_chat_room import router as unified_chat_room_router
 app.include_router(unified_chat_room_router)
 
+# v6.5.5: 注册聊天室SSE流式API路由（挂载到8888端口以共享状态）
+from chatroom_api import router as chatroom_api_router
+app.include_router(chatroom_api_router)
+
 # ============================================
 # Initialize LLM and Tools
 # ============================================

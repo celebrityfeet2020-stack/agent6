@@ -170,7 +170,9 @@ export const useChat = () => {
       };
       
       // 4. 发送POST请求到 /api/chat/stream
-      const response = await fetch('/api/chat/stream', {
+      // v6.5.5: 使用环境变量配置 API 基础 URL
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+      const response = await fetch(`${API_BASE_URL}/api/chat/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
