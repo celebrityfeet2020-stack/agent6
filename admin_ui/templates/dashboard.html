@@ -288,11 +288,29 @@
 
     <script>
         let editingPromptId = null;
-        const startTime = Date.now();
+        // v6.5.6: 从后端获取容器启动时间
+        let containerStartTime = null;
+
+        // 获取后端启动时间
+        async function fetchStartTime() {
+            try {
+                const response = await fetch('/api/system/uptime');
+                const data = await response.json();
+                if (data.start_time) {
+                    containerStartTime = new Date(data.start_time);
+                }
+            } catch (error) {
+                console.error('获取启动时间失败:', error);
+            }
+        }
 
         // 更新运行时间
         function updateUptime() {
-            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            if (!containerStartTime) {
+                document.getElementById('uptime').textContent = '--';
+                return;
+            }
+            const elapsed = Math.floor((Date.now() - containerStartTime.getTime()) / 1000);
             const hours = Math.floor(elapsed / 3600);
             const minutes = Math.floor((elapsed % 3600) / 60);
             const seconds = elapsed % 60;
@@ -301,7 +319,8 @@
 
         // 更新内存预加载状态
         function updateMemoryStatus() {
-            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            if (!containerStartTime) return;
+            const elapsed = Math.floor((Date.now() - containerStartTime.getTime()) / 1000);
             const memoryIcon = document.getElementById('memory-status');
             const memoryLabel = document.getElementById('memory-label');
             const countdown = document.getElementById('memory-countdown');
@@ -475,11 +494,13 @@
             }
         }
 
-        // 初始化
-        setInterval(updateUptime, 1000);
-        setInterval(updateMemoryStatus, 1000);
-        updateUptime();
-        updateMemoryStatus();
+        // v6.5.6: 初始化 - 先获取后端启动时间
+        fetchStartTime().then(() => {
+            setInterval(updateUptime, 1000);
+            setInterval(updateMemoryStatus, 1000);
+            updateUptime();
+            updateMemoryStatus();
+        });
         refreshModels();
         loadPrompts();
     </script>

@@ -87,16 +87,16 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile.v6.5.5
+          file: ./Dockerfile.v6.5.6
           platforms: linux/arm64
           push: true
           tags: |
             junpeng999/agent6:latest-arm64
-            junpeng999/agent6:v6.5.5-arm64
+            junpeng999/agent6:v6.5.6-arm64
           build-args: |
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
             VCS_REF=${{ github.sha }}
-            VERSION=v6.5.5
+            VERSION=v6.5.6
           cache-from: type=gha
           cache-to: type=gha,mode=max
       

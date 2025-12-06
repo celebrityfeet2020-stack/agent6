@@ -36,7 +36,7 @@ from app.performance.performance_monitor import (
 
 admin_app = FastAPI(
     title="M3 Agent Admin Panel",
-    version="6.5.4"
+    version="6.5.6"
 )
 
 admin_app.add_middleware(
