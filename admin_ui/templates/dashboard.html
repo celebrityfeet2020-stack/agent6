@@ -3,12 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M3 Agent 管理面板 v6.0</title>
+    <title>M3 Agent 管理面板 v6.5.1</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; }
+        
+        /* 深色护眼主题 */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background: #1a1a2e;
+            color: #e0e0e0;
+        }
+        
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 20px; }
+        
+        .header { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+            padding: 30px; 
+            border-radius: 10px; 
+            margin-bottom: 20px; 
+        }
         .header h1 { font-size: 32px; margin-bottom: 10px; }
         
         /* 布局 */
@@ -16,67 +30,104 @@
         .grid-3x3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px; }
         .grid-full { display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 20px; }
         
-        .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .card h2 { font-size: 18px; margin-bottom: 15px; color: #333; }
+        .card { 
+            background: #16213e; 
+            border-radius: 10px; 
+            padding: 20px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            border: 1px solid #2a3f5f;
+        }
+        .card h2 { font-size: 18px; margin-bottom: 15px; color: #e0e0e0; }
+        
         .status { display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 14px; font-weight: 500; }
         .status.running { background: #10b981; color: white; }
         .status.healthy { background: #10b981; color: white; }
         .status.degraded { background: #f59e0b; color: white; }
         .status.error { background: #ef4444; color: white; }
-        .model-info { background: #f9fafb; padding: 15px; border-radius: 8px; margin: 10px 0; }
-        .model-info p { margin: 5px 0; color: #666; font-size: 14px; }
-        .model-info strong { color: #333; }
+        
+        .model-info { background: #0f1b2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #2a3f5f; }
+        .model-info p { margin: 5px 0; color: #b0b0b0; font-size: 14px; }
+        .model-info strong { color: #e0e0e0; }
+        
         .badge { display: inline-block; padding: 3px 10px; background: #3b82f6; color: white; border-radius: 12px; font-size: 12px; margin-left: 10px; }
-        button { background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; margin: 5px; }
+        
+        button { 
+            background: #667eea; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 14px; 
+            margin: 5px; 
+        }
         button:hover { background: #5568d3; }
         button.danger { background: #ef4444; }
         button.danger:hover { background: #dc2626; }
         button.success { background: #10b981; }
         button.success:hover { background: #059669; }
         button.small { padding: 5px 12px; font-size: 12px; }
+        
         .tools-list { list-style: none; }
-        .tools-list li { padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+        .tools-list li { padding: 8px 0; border-bottom: 1px solid #2a3f5f; color: #b0b0b0; }
         .tools-list li:last-child { border-bottom: none; }
-        .note { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 15px 0; border-radius: 4px; font-size: 14px; }
-        .note.success { background: #d1fae5; border-left-color: #10b981; }
-        .note.info { background: #dbeafe; border-left-color: #3b82f6; }
+        
+        .note { 
+            background: #2a2a1e; 
+            border-left: 4px solid #f59e0b; 
+            padding: 12px; 
+            margin: 15px 0; 
+            border-radius: 4px; 
+            font-size: 14px; 
+            color: #e0e0e0;
+        }
+        .note.success { background: #1a2e1a; border-left-color: #10b981; }
+        .note.info { background: #1a2a3e; border-left-color: #3b82f6; }
         
         /* 性能指标样式 */
-        .perf-metric { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
+        .perf-metric { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #2a3f5f; }
         .perf-metric:last-child { border-bottom: none; }
-        .perf-label { color: #666; font-size: 14px; }
-        .perf-value { color: #333; font-size: 16px; font-weight: 600; }
+        .perf-label { color: #b0b0b0; font-size: 14px; }
+        .perf-value { color: #e0e0e0; font-size: 16px; font-weight: 600; }
         .perf-value.good { color: #10b981; }
         .perf-value.warning { color: #f59e0b; }
         .perf-value.error { color: #ef4444; }
-        .perf-timestamp { color: #999; font-size: 12px; margin-top: 10px; text-align: right; }
+        .perf-timestamp { color: #808080; font-size: 12px; margin-top: 10px; text-align: right; }
         
         /* 大数字卡片 */
         .big-number { text-align: center; padding: 20px; }
         .big-number .number { font-size: 48px; font-weight: 700; color: #667eea; margin: 10px 0; }
-        .big-number .label { font-size: 14px; color: #666; }
-        .big-number .sublabel { font-size: 12px; color: #999; margin-top: 5px; }
+        .big-number .label { font-size: 14px; color: #b0b0b0; }
+        .big-number .sublabel { font-size: 12px; color: #808080; margin-top: 5px; }
         
         /* 元提示词管理样式 */
-        .prompt-item { background: #f9fafb; padding: 15px; border-radius: 8px; margin: 10px 0; border: 2px solid #e5e7eb; }
-        .prompt-item.active { border-color: #10b981; background: #ecfdf5; }
+        .prompt-item { background: #0f1b2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 2px solid #2a3f5f; }
+        .prompt-item.active { border-color: #10b981; background: #1a2e1a; }
         .prompt-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .prompt-name { font-weight: 600; color: #333; font-size: 16px; }
+        .prompt-name { font-weight: 600; color: #e0e0e0; font-size: 16px; }
         .prompt-actions { display: flex; gap: 8px; }
         .prompt-actions button { padding: 5px 12px; font-size: 12px; margin: 0; }
-        .prompt-description { color: #666; font-size: 14px; margin-bottom: 8px; }
-        .prompt-preview { background: white; padding: 10px; border-radius: 4px; font-size: 13px; color: #555; max-height: 100px; overflow: hidden; }
+        .prompt-description { color: #b0b0b0; font-size: 14px; margin-bottom: 8px; }
+        .prompt-preview { background: #16213e; padding: 10px; border-radius: 4px; font-size: 13px; color: #b0b0b0; max-height: 100px; overflow: hidden; border: 1px solid #2a3f5f; }
         
         /* 模态框样式 */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
-        .modal-content { background: white; margin: 50px auto; padding: 30px; border-radius: 10px; max-width: 700px; max-height: 80vh; overflow-y: auto; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); }
+        .modal-content { background: #16213e; margin: 50px auto; padding: 30px; border-radius: 10px; max-width: 700px; max-height: 80vh; overflow-y: auto; border: 1px solid #2a3f5f; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .modal-header h2 { font-size: 24px; color: #333; }
-        .close { font-size: 28px; font-weight: bold; color: #999; cursor: pointer; }
-        .close:hover { color: #333; }
+        .modal-header h2 { font-size: 24px; color: #e0e0e0; }
+        .close { font-size: 28px; font-weight: bold; color: #808080; cursor: pointer; }
+        .close:hover { color: #e0e0e0; }
         .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #333; }
-        .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #e0e0e0; }
+        .form-group input, .form-group textarea { 
+            width: 100%; 
+            padding: 10px; 
+            border: 1px solid #2a3f5f; 
+            border-radius: 6px; 
+            font-size: 14px; 
+            background: #0f1b2e;
+            color: #e0e0e0;
+        }
         .form-group textarea { min-height: 300px; font-family: monospace; }
         
         /* 响应式布局 */
@@ -91,706 +142,346 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚀 M3 Agent 管理面板 v6.0</h1>
+            <h1>🚀 M3 Agent 管理面板 v6.5.1</h1>
             <p>智能延迟预加载 | 定时健康检测 | 性能监控 | 元提示词管理</p>
         </div>
 
         <div class="note success">
-            ✅ <strong>v6.0 新特性：</strong>启动后15分钟预加载内存 | 每30分钟健康检测 | 每30分钟性能测试(错开15分钟) | 自动恢复机制 | 北京时间显示修复
+            ✅ <strong>v6.5.1 新特性：</strong>启动后5分钟加载内存 | 启动后20分钟执行性能测试 | 每30分钟执行一次(错开15分钟) | 深色护眼主题 | 北京时间显示修复
         </div>
 
-        <!-- 第一行：系统状态概览 (3个卡片) -->
+        <!-- 系统运行时间、内存预加载、整体健康状态 -->
         <div class="grid-3x3">
-            <!-- 系统运行时间 -->
             <div class="card">
+                <h2>系统运行时间</h2>
                 <div class="big-number">
-                    <div class="label">系统运行时间</div>
-                    <div class="number" id="uptime-display">--</div>
-                    <div class="sublabel" id="started-at">启动时间: --</div>
+                    <div class="number" id="uptime">--</div>
+                    <div class="label">包括时间</div>
                 </div>
             </div>
 
-            <!-- 预加载状态 -->
             <div class="card">
+                <h2>内存预加载</h2>
                 <div class="big-number">
-                    <div class="label">内存预加载</div>
-                    <div class="number" id="preload-status-icon">⏳</div>
-                    <div class="sublabel" id="preload-time">等待中...</div>
+                    <div class="number" id="memory-status">⏳</div>
+                    <div class="label" id="memory-label">等待中... (T+<span id="memory-countdown">--</span>秒)</div>
                 </div>
             </div>
 
-            <!-- 整体健康状态 -->
             <div class="card">
+                <h2>整体健康状态</h2>
                 <div class="big-number">
-                    <div class="label">整体健康状态</div>
-                    <div class="number" id="overall-health-icon">🟢</div>
-                    <div class="sublabel" id="overall-health-text">健康</div>
+                    <div class="number" id="health-icon">🟢</div>
+                    <div class="label" id="health-status">健康</div>
                 </div>
             </div>
         </div>
 
-        <!-- 第二行：LLM后端状态 + Agent API状态 -->
+        <!-- LLM后端状态、Agent API状态 -->
         <div class="grid-2x2">
-            <!-- LLM 后端状态 -->
             <div class="card">
-                <h2>🤖 LLM 后端状态</h2>
-                <span class="status running" id="llm-status">运行中</span>
+                <h2>🤖 LLM后端状态</h2>
+                <p><span class="status running">运行中</span></p>
                 <div class="model-info">
-                    <p><strong>API 地址:</strong> <span id="base-url" style="font-size: 12px;">加载中...</span></p>
-                    <p><strong>当前模型:</strong> <span id="current-model">加载中...</span></p>
+                    <p><strong>API地址:</strong> <span id="llm-url">http://192.168.9.125:8000/v1</span></p>
+                    <p><strong>当前模型:</strong> <span id="llm-model">minimax/minimax-m2</span></p>
                     <p><strong>可用模型:</strong></p>
-                    <ul id="available-models" class="tools-list" style="max-height: 150px; overflow-y: auto;">
-                        <li>加载中...</li>
-                    </ul>
+                    <div id="available-models" style="max-height: 150px; overflow-y: auto; padding: 10px 0;">
+                        <p style="color: #808080;">加载中...</p>
+                    </div>
                 </div>
-                <button onclick="refreshLLMStatus()">🔄 刷新状态</button>
+                <button onclick="refreshModels()" class="small">🔄 刷新状态</button>
             </div>
 
-            <!-- Agent API 状态 -->
             <div class="card">
-                <h2>🧠 Agent API 状态</h2>
-                <span class="status running">运行中</span>
+                <h2>🎯 Agent API状态</h2>
+                <p><span class="status running">运行中</span></p>
                 <div class="model-info">
-                    <p><strong>配置模型:</strong> <span id="agent-model">加载中...</span></p>
-                    <p><strong>工具数量:</strong> <span id="tools-count">加载中...</span></p>
-                    <p><strong>API 端口:</strong> <span id="api-port">加载中...</span></p>
-                    <p><strong>最后检测:</strong> <span id="last-check-time">--</span></p>
+                    <p><strong>配置模型:</strong> <span id="agent-model">minimax/minimax-m2</span></p>
+                    <p><strong>工具数量:</strong> <span id="tools-count">15</span></p>
+                    <p><strong>API端口:</strong> 8000</p>
+                    <p><strong>最后检测:</strong> --</p>
                 </div>
-                <button onclick="triggerHealthCheck()" class="success">🔍 立即检测</button>
+                <button onclick="testAgent()" class="small">🧪 立即检测</button>
             </div>
         </div>
 
-        <!-- 第三行：模型性能 + API性能 -->
+        <!-- 模型性能、API性能 -->
         <div class="grid-2x2">
-            <!-- 模型性能 -->
             <div class="card">
-                <h2>⚡ 模型性能</h2>
-                <div class="model-info">
+                <h2>📊 模型性能</h2>
+                <div id="model-performance">
                     <div class="perf-metric">
-                        <span class="perf-label">Tokens/s（吞吐量）</span>
-                        <span class="perf-value good" id="tokens-per-second">--</span>
+                        <span class="perf-label">响应时间</span>
+                        <span class="perf-value good" id="model-latency">--</span>
                     </div>
                     <div class="perf-metric">
-                        <span class="perf-label">TTFT（首token延迟）</span>
-                        <span class="perf-value" id="ttft">-- ms</span>
+                        <span class="perf-label">吞吐量</span>
+                        <span class="perf-value good" id="model-throughput">--</span>
                     </div>
                     <div class="perf-metric">
-                        <span class="perf-label">总延迟</span>
-                        <span class="perf-value" id="total-latency">-- ms</span>
+                        <span class="perf-label">错误率</span>
+                        <span class="perf-value good" id="model-error-rate">--</span>
                     </div>
-                    <div class="perf-timestamp" id="model-perf-updated">--</div>
+                    <p class="perf-timestamp">最后测试: <span id="model-perf-time">--</span></p>
                 </div>
-                <button onclick="triggerPerformanceTest()" class="success small">🚀 立即测试</button>
+                <button onclick="runBenchmark()" class="small">▶️ 开始测试</button>
             </div>
 
-            <!-- API 性能 -->
             <div class="card">
-                <h2>📊 API 性能</h2>
-                <div class="model-info">
+                <h2>📈 API性能</h2>
+                <div id="api-performance">
                     <div class="perf-metric">
                         <span class="perf-label">平均响应时间</span>
-                        <span class="perf-value" id="api-response-time">-- ms</span>
+                        <span class="perf-value good" id="api-latency">--</span>
                     </div>
                     <div class="perf-metric">
-                        <span class="perf-label">请求总数</span>
-                        <span class="perf-value" id="total-requests">--</span>
+                        <span class="perf-label">请求成功率</span>
+                        <span class="perf-value good" id="api-success-rate">--</span>
                     </div>
                     <div class="perf-metric">
-                        <span class="perf-label">成功率</span>
-                        <span class="perf-value good" id="success-rate">--%</span>
+                        <span class="perf-label">活跃连接</span>
+                        <span class="perf-value" id="api-connections">--</span>
                     </div>
-                    <div class="perf-metric">
-                        <span class="perf-label">每小时请求数</span>
-                        <span class="perf-value" id="requests-per-hour">--</span>
-                    </div>
-                    <div class="perf-timestamp" id="api-perf-updated">--</div>
+                    <p class="perf-timestamp">数据更新: <span id="api-perf-time">--</span></p>
                 </div>
             </div>
         </div>
 
-        <!-- 第四行：健康检测详情 -->
+        <!-- 元提示词管理 -->
         <div class="grid-full">
             <div class="card">
-                <h2>🏥 健康检测详情</h2>
-                <div class="grid-2x2" style="margin-top: 15px;">
-                    <div class="model-info">
-                        <h3 style="margin-bottom: 10px;">🔧 工具状态</h3>
-                        <div class="perf-metric">
-                            <span class="perf-label">可用工具数</span>
-                            <span class="perf-value" id="health-tools-count">--</span>
-                        </div>
-                        <div class="perf-metric">
-                            <span class="perf-label">工具状态</span>
-                            <span class="perf-value" id="health-tools-status">--</span>
-                        </div>
-                    </div>
-                    <div class="model-info">
-                        <h3 style="margin-bottom: 10px;">🔌 API状态</h3>
-                        <div class="perf-metric">
-                            <span class="perf-label">Fleet API</span>
-                            <span class="perf-value" id="health-fleet-api">--</span>
-                        </div>
-                        <div class="perf-metric">
-                            <span class="perf-label">LangGraph API</span>
-                            <span class="perf-value" id="health-langgraph-api">--</span>
-                        </div>
-                        <div class="perf-metric">
-                            <span class="perf-label">LLM连接</span>
-                            <span class="perf-value" id="health-llm-connection">--</span>
-                        </div>
-                    </div>
+                <h2>📝 元提示词管理 <button onclick="showAddPromptModal()" class="small success">➕ 新增</button></h2>
+                <div id="prompts-list">
+                    <p style="color: #808080;">加载中...</p>
                 </div>
             </div>
         </div>
 
-        <!-- 第五行：元提示词管理（核心功能） -->
-        <div class="grid-full">
-            <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2>📝 元提示词管理</h2>
-                    <button onclick="showCreatePromptModal()">➕ 创建新提示词</button>
-                </div>
-                <div id="prompts-container">
-                    <p style="color: #666;">加载中...</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- 第六行：可用工具 -->
-        <div class="grid-full">
-            <div class="card">
-                <h2>🛠️ 可用工具 (<span id="tools-count-display">15</span>个)</h2>
-                <ul class="tools-list">
-                    <li>✅ <strong>Web Search</strong> - 网页搜索 (DuckDuckGo)</li>
-                    <li>✅ <strong>Web Scraper</strong> - 网页抓取 (BeautifulSoup4)</li>
-                    <li>✅ <strong>Browser Automation</strong> - 浏览器自动化 (Playwright)</li>
-                    <li>✅ <strong>Code Executor</strong> - 代码执行 (Docker沙盒)</li>
-                    <li>✅ <strong>File Operations</strong> - 文件操作</li>
-                    <li>✅ <strong>Image OCR</strong> - 图像文字识别 (EasyOCR + Tesseract)</li>
-                    <li>✅ <strong>Image Analysis</strong> - 图像分析</li>
-                    <li>✅ <strong>Data Analysis</strong> - 数据分析 (Pandas + Matplotlib)</li>
-                    <li>✅ <strong>SSH Tool</strong> - SSH 远程执行</li>
-                    <li>✅ <strong>Git Tool</strong> - Git 仓库管理</li>
-                    <li>✅ <strong>Universal API</strong> - 通用 API 调用</li>
-                    <li>✅ <strong>Telegram Tool</strong> - Telegram 机器人</li>
-                    <li>✅ <strong>Speech Recognition</strong> - 语音识别 (Whisper)</li>
-                    <li>✅ <strong>RPA Tool</strong> - RPA自动化</li>
-                    <li>✅ <strong>File Sync</strong> - 文件同步</li>
-                </ul>
-            </div>
-        </div>
     </div>
 
-    <!-- 创建/编辑提示词模态框 -->
+    <!-- 新增/编辑提示词模态框 -->
     <div id="promptModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="modal-title">创建新提示词</h2>
-                <span class="close" onclick="closeModal()">&times;</span>
+                <h2 id="modal-title">新增元提示词</h2>
+                <span class="close" onclick="closePromptModal()">&times;</span>
             </div>
-            <form id="promptForm">
-                <input type="hidden" id="prompt-id">
+            <form id="promptForm" onsubmit="savePrompt(event)">
                 <div class="form-group">
                     <label for="prompt-name">名称</label>
-                    <input type="text" id="prompt-name" required placeholder="例如：专业技术助手">
+                    <input type="text" id="prompt-name" required>
                 </div>
                 <div class="form-group">
-                    <label for="prompt-description">描述（可选）</label>
-                    <input type="text" id="prompt-description" placeholder="简要描述这个提示词的用途">
+                    <label for="prompt-description">描述</label>
+                    <input type="text" id="prompt-description" required>
                 </div>
                 <div class="form-group">
-                    <label for="prompt-content">提示词内容</label>
-                    <textarea id="prompt-content" required placeholder="输入完整的系统提示词..."></textarea>
+                    <label for="prompt-content">内容</label>
+                    <textarea id="prompt-content" required></textarea>
                 </div>
-                <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                    <button type="button" onclick="closeModal()">取消</button>
-                    <button type="submit" class="success">保存</button>
-                </div>
+                <button type="submit" class="success">💾 保存</button>
+                <button type="button" onclick="closePromptModal()">取消</button>
             </form>
         </div>
     </div>
 
     <script>
-        // ============================================
-        // 时间处理工具函数（修复：统一使用北京时间）
-        // ============================================
-        
-        /**
-         * 将ISO时间字符串转换为北京时间显示
-         * @param {string} isoString - ISO 8601格式的时间字符串
-         * @returns {string} 北京时间格式化字符串
-         */
-        function toBeijingTime(isoString) {
-            if (!isoString) return '--';
-            
-            try {
-                const date = new Date(isoString);
-                
-                // 转换为北京时间 (UTC+8)
-                const beijingTime = new Date(date.getTime() + (8 * 60 * 60 * 1000));
-                
-                // 格式化为: 2024-12-05 12:30:45
-                const year = beijingTime.getUTCFullYear();
-                const month = String(beijingTime.getUTCMonth() + 1).padStart(2, '0');
-                const day = String(beijingTime.getUTCDate()).padStart(2, '0');
-                const hours = String(beijingTime.getUTCHours()).padStart(2, '0');
-                const minutes = String(beijingTime.getUTCMinutes()).padStart(2, '0');
-                const seconds = String(beijingTime.getUTCSeconds()).padStart(2, '0');
-                
-                return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-            } catch (e) {
-                console.error('时间转换失败:', e);
-                return isoString;
-            }
+        let editingPromptId = null;
+        const startTime = Date.now();
+
+        // 更新运行时间
+        function updateUptime() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const hours = Math.floor(elapsed / 3600);
+            const minutes = Math.floor((elapsed % 3600) / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('uptime').textContent = `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
         }
-        
-        /**
-         * 格式化运行时间
-         * @param {number} seconds - 运行秒数
-         * @returns {string} 格式化的运行时间
-         */
-        function formatUptime(seconds) {
-            if (!seconds) return '--';
-            
-            const days = Math.floor(seconds / 86400);
-            const hours = Math.floor((seconds % 86400) / 3600);
-            const minutes = Math.floor((seconds % 3600) / 60);
-            const secs = Math.floor(seconds % 60);
-            
-            if (days > 0) {
-                return `${days}天 ${hours}小时`;
-            } else if (hours > 0) {
-                return `${hours}小时 ${minutes}分钟`;
-            } else if (minutes > 0) {
-                return `${minutes}分钟`;
+
+        // 更新内存预加载状态
+        function updateMemoryStatus() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const memoryIcon = document.getElementById('memory-status');
+            const memoryLabel = document.getElementById('memory-label');
+            const countdown = document.getElementById('memory-countdown');
+
+            if (elapsed < 300) {
+                // 5分钟内
+                const remaining = 300 - elapsed;
+                memoryIcon.textContent = '⏳';
+                memoryLabel.innerHTML = `等待中... (T+<span id="memory-countdown">${remaining}</span>秒)`;
+            } else if (elapsed < 1200) {
+                // 5-20分钟
+                const remaining = 1200 - elapsed;
+                memoryIcon.textContent = '✅';
+                memoryLabel.innerHTML = `已加载 | 性能测试倒计时: ${remaining}秒`;
             } else {
-                return `${secs}秒`;
+                // 20分钟后
+                memoryIcon.textContent = '✅';
+                memoryLabel.textContent = '已加载 | 定期测试中';
             }
         }
 
-        // ============================================
-        // v6.0 Dashboard API 集成
-        // ============================================
-        
-        /**
-         * 加载系统状态（v6.0新API）
-         */
-        async function loadSystemStatus() {
+        // 刷新模型列表
+        async function refreshModels() {
             try {
-                const response = await fetch('/api/dashboard/status');
+                const response = await fetch('/api/models');
                 const data = await response.json();
-                
-                // 更新运行时间
-                if (data.details && data.details.uptime_formatted) {
-                    document.getElementById('uptime-display').textContent = data.details.uptime_formatted;
-                }
-                
-                if (data.details && data.details.started_at) {
-                    document.getElementById('started-at').textContent = `启动时间: ${toBeijingTime(data.details.started_at)}`;
-                }
-                
-                // 更新整体健康状态
-                if (data.summary) {
-                    const overall = data.summary.overall;
-                    const healthIcon = document.getElementById('overall-health-icon');
-                    const healthText = document.getElementById('overall-health-text');
-                    
-                    if (overall === 'healthy') {
-                        healthIcon.textContent = '🟢';
-                        healthText.textContent = '健康';
-                        healthText.style.color = '#10b981';
-                    } else if (overall === 'degraded') {
-                        healthIcon.textContent = '🟡';
-                        healthText.textContent = '降级';
-                        healthText.style.color = '#f59e0b';
-                    } else {
-                        healthIcon.textContent = '🔴';
-                        healthText.textContent = '异常';
-                        healthText.style.color = '#ef4444';
-                    }
-                    
-                    // 更新最后检测时间
-                    if (data.summary.last_check) {
-                        document.getElementById('last-check-time').textContent = toBeijingTime(data.summary.last_check);
-                    }
-                }
-                
+                const modelsDiv = document.getElementById('available-models');
+                modelsDiv.innerHTML = data.models.map(m => `<p style="color: #b0b0b0;">• ${m}</p>`).join('');
             } catch (error) {
-                console.error('加载系统状态失败:', error);
+                console.error('Failed to fetch models:', error);
             }
         }
-        
-        /**
-         * 加载预加载状态
-         */
-        async function loadPreloadStatus() {
+
+        // 测试Agent
+        async function testAgent() {
+            alert('Agent测试功能开发中...');
+        }
+
+        // 运行基准测试
+        async function runBenchmark() {
+            if (!confirm('性能测试将占用资源约30秒,是否继续?')) return;
+            
             try {
-                const response = await fetch('/api/dashboard/preload-status');
+                const response = await fetch('/api/benchmark');
                 const data = await response.json();
-                
-                const icon = document.getElementById('preload-status-icon');
-                const time = document.getElementById('preload-time');
-                
-                if (data.completed) {
-                    icon.textContent = '✅';
-                    time.textContent = `完成于: ${toBeijingTime(data.preload_time)}`;
-                    time.style.color = '#10b981';
-                } else {
-                    icon.textContent = '⏳';
-                    time.textContent = '等待中... (T+15分钟)';
-                    time.style.color = '#f59e0b';
-                }
-                
+                alert(`测试完成!\\n响应时间: ${data.latency}ms\\n吞吐量: ${data.throughput} tokens/s`);
             } catch (error) {
-                console.error('加载预加载状态失败:', error);
+                alert('测试失败: ' + error.message);
             }
         }
-        
-        /**
-         * 加载健康检测结果
-         */
-        async function loadHealthStatus() {
-            try {
-                const response = await fetch('/api/dashboard/health');
-                const result = await response.json();
-                
-                if (result.status === 'pending') {
-                    return; // 还未执行首次检测
-                }
-                
-                const data = result.data;
-                
-                // 更新工具状态
-                if (data.tools) {
-                    document.getElementById('health-tools-count').textContent = data.tools.count || '--';
-                    document.getElementById('health-tools-status').textContent = data.tools.status === 'available' ? '✅ 可用' : '❌ 不可用';
-                }
-                
-                // 更新API状态
-                if (data.apis) {
-                    document.getElementById('health-fleet-api').textContent = data.apis.fleet === 'available' ? '✅' : '❌';
-                    document.getElementById('health-langgraph-api').textContent = data.apis.langgraph === 'available' ? '✅' : '❌';
-                    
-                    if (data.apis.llm) {
-                        const llmStatus = data.apis.llm.status === 'connected' ? '✅ 已连接' : '❌ 断开';
-                        document.getElementById('health-llm-connection').textContent = llmStatus;
-                    }
-                }
-                
-            } catch (error) {
-                console.error('加载健康状态失败:', error);
-            }
-        }
-        
-        /**
-         * 加载性能测试结果
-         */
-        async function loadPerformanceData() {
-            try {
-                const response = await fetch('/api/dashboard/performance');
-                const result = await response.json();
-                
-                if (result.status === 'pending') {
-                    return; // 还未执行首次测试
-                }
-                
-                const data = result.data;
-                
-                // 更新模型性能
-                if (data.model_performance) {
-                    const mp = data.model_performance;
-                    document.getElementById('tokens-per-second').textContent = mp.tokens_per_second || '--';
-                    document.getElementById('ttft').textContent = mp.ttft_ms ? `${mp.ttft_ms} ms` : '-- ms';
-                    document.getElementById('total-latency').textContent = mp.total_latency_ms ? `${mp.total_latency_ms} ms` : '-- ms';
-                    document.getElementById('model-perf-updated').textContent = `更新时间: ${toBeijingTime(data.timestamp)}`;
-                }
-                
-            } catch (error) {
-                console.error('加载性能数据失败:', error);
-            }
-        }
-        
-        /**
-         * 加载LLM后端状态（兼容旧API）
-         */
-        async function loadLLMStatus() {
-            try {
-                const response = await fetch('/api/status');
-                const data = await response.json();
-                
-                // 更新 LLM 后端状态
-                if (data.llm_backend) {
-                    document.getElementById('base-url').textContent = data.llm_backend.base_url;
-                    document.getElementById('current-model').textContent = data.llm_backend.current_model;
-                    
-                    // 更新可用模型列表
-                    const modelsUl = document.getElementById('available-models');
-                    if (data.llm_backend.available_models && data.llm_backend.available_models.length > 0) {
-                        modelsUl.innerHTML = data.llm_backend.available_models.map(model => `<li>${model}</li>`).join('');
-                    } else {
-                        modelsUl.innerHTML = '<li>无可用模型</li>';
-                    }
-                }
-                
-                // 更新 Agent API 状态
-                if (data.agent_api) {
-                    document.getElementById('agent-model').textContent = data.agent_api.configured_model;
-                    document.getElementById('tools-count').textContent = data.agent_api.tools_count;
-                    document.getElementById('tools-count-display').textContent = data.agent_api.tools_count;
-                    document.getElementById('api-port').textContent = data.agent_api.api_port;
-                }
-                
-                // 更新API性能（兼容旧数据）
-                if (data.api_performance) {
-                    const ap = data.api_performance;
-                    document.getElementById('api-response-time').textContent = ap.average_response_time_ms ? `${ap.average_response_time_ms} ms` : '-- ms';
-                    document.getElementById('total-requests').textContent = ap.total_requests || '--';
-                    document.getElementById('success-rate').textContent = ap.success_rate ? `${ap.success_rate}%` : '--%';
-                    document.getElementById('requests-per-hour').textContent = ap.requests_per_hour || '--';
-                    
-                    if (ap.last_updated) {
-                        document.getElementById('api-perf-updated').textContent = `更新时间: ${toBeijingTime(ap.last_updated)}`;
-                    }
-                }
-                
-            } catch (error) {
-                console.error('加载LLM状态失败:', error);
-            }
-        }
-        
-        // ============================================
-        // 元提示词管理功能
-        // ============================================
-        
-        /**
-         * 加载提示词列表
-         */
+
+        // 加载提示词列表
         async function loadPrompts() {
             try {
                 const response = await fetch('/api/prompts');
-                const prompts = await response.json();
+                const data = await response.json();
+                const promptsList = document.getElementById('prompts-list');
                 
-                const container = document.getElementById('prompts-container');
-                if (prompts.length === 0) {
-                    container.innerHTML = '<p style="color: #999;">暂无提示词</p>';
+                if (data.prompts.length === 0) {
+                    promptsList.innerHTML = '<p style="color: #808080;">暂无提示词</p>';
                     return;
                 }
-                
-                container.innerHTML = prompts.map(prompt => `
-                    <div class="prompt-item ${prompt.is_active ? 'active' : ''}">
+
+                promptsList.innerHTML = data.prompts.map(p => `
+                    <div class="prompt-item ${p.is_active ? 'active' : ''}">
                         <div class="prompt-header">
-                            <span class="prompt-name">
-                                ${prompt.name}
-                                ${prompt.is_active ? '<span class="badge" style="background: #10b981;">当前使用</span>' : ''}
-                            </span>
+                            <span class="prompt-name">${p.name} ${p.is_active ? '<span class="badge">激活中</span>' : ''}</span>
                             <div class="prompt-actions">
-                                ${!prompt.is_active ? `<button class="success" onclick="activatePrompt('${prompt.id}')">激活</button>` : ''}
-                                <button onclick="editPrompt('${prompt.id}')">编辑</button>
-                                ${prompt.id !== 'default' ? `<button class="danger" onclick="deletePrompt('${prompt.id}')">删除</button>` : ''}
+                                ${!p.is_active ? `<button onclick="activatePrompt('${p.id}')" class="small success">激活</button>` : ''}
+                                <button onclick="editPrompt('${p.id}')" class="small">编辑</button>
+                                ${!p.is_default ? `<button onclick="deletePrompt('${p.id}')" class="small danger">删除</button>` : ''}
                             </div>
                         </div>
-                        ${prompt.description ? `<div class="prompt-description">${prompt.description}</div>` : ''}
-                        <div class="prompt-preview">${prompt.prompt.substring(0, 200)}...</div>
+                        <div class="prompt-description">${p.description}</div>
+                        <div class="prompt-preview">${p.content.substring(0, 100)}...</div>
                     </div>
                 `).join('');
             } catch (error) {
-                console.error('加载提示词失败:', error);
+                console.error('Failed to load prompts:', error);
             }
         }
 
-        /**
-         * 显示创建提示词模态框
-         */
-        function showCreatePromptModal() {
-            document.getElementById('modal-title').textContent = '创建新提示词';
+        // 显示新增提示词模态框
+        function showAddPromptModal() {
+            editingPromptId = null;
+            document.getElementById('modal-title').textContent = '新增元提示词';
             document.getElementById('promptForm').reset();
-            document.getElementById('prompt-id').value = '';
             document.getElementById('promptModal').style.display = 'block';
         }
 
-        /**
-         * 编辑提示词
-         */
+        // 关闭模态框
+        function closePromptModal() {
+            document.getElementById('promptModal').style.display = 'none';
+        }
+
+        // 保存提示词
+        async function savePrompt(event) {
+            event.preventDefault();
+            
+            const data = {
+                name: document.getElementById('prompt-name').value,
+                description: document.getElementById('prompt-description').value,
+                content: document.getElementById('prompt-content').value
+            };
+
+            try {
+                const url = editingPromptId ? `/api/prompts/${editingPromptId}` : '/api/prompts';
+                const method = editingPromptId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    closePromptModal();
+                    loadPrompts();
+                } else {
+                    alert('保存失败');
+                }
+            } catch (error) {
+                alert('保存失败: ' + error.message);
+            }
+        }
+
+        // 编辑提示词
         async function editPrompt(id) {
             try {
                 const response = await fetch(`/api/prompts/${id}`);
                 const prompt = await response.json();
                 
-                document.getElementById('modal-title').textContent = '编辑提示词';
-                document.getElementById('prompt-id').value = prompt.id;
+                editingPromptId = id;
+                document.getElementById('modal-title').textContent = '编辑元提示词';
                 document.getElementById('prompt-name').value = prompt.name;
-                document.getElementById('prompt-description').value = prompt.description || '';
-                document.getElementById('prompt-content').value = prompt.prompt;
+                document.getElementById('prompt-description').value = prompt.description;
+                document.getElementById('prompt-content').value = prompt.content;
                 document.getElementById('promptModal').style.display = 'block';
             } catch (error) {
-                alert('加载提示词失败');
+                alert('加载失败: ' + error.message);
             }
         }
 
-        /**
-         * 激活提示词
-         */
+        // 激活提示词
         async function activatePrompt(id) {
             try {
-                await fetch(`/api/prompts/${id}/activate`, { method: 'POST' });
-                await loadPrompts();
-                alert('✅ 提示词已激活！');
-            } catch (error) {
-                alert('❌ 激活失败');
-            }
-        }
-
-        /**
-         * 删除提示词
-         */
-        async function deletePrompt(id) {
-            if (!confirm('确定要删除这个提示词吗？')) return;
-            
-            try {
-                await fetch(`/api/prompts/${id}`, { method: 'DELETE' });
-                await loadPrompts();
-                alert('✅ 提示词已删除');
-            } catch (error) {
-                alert('❌ 删除失败');
-            }
-        }
-
-        /**
-         * 关闭模态框
-         */
-        function closeModal() {
-            document.getElementById('promptModal').style.display = 'none';
-        }
-
-        /**
-         * 提交表单
-         */
-        document.getElementById('promptForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const id = document.getElementById('prompt-id').value;
-            const data = {
-                name: document.getElementById('prompt-name').value,
-                description: document.getElementById('prompt-description').value,
-                prompt: document.getElementById('prompt-content').value
-            };
-            
-            try {
-                if (id) {
-                    // 更新
-                    await fetch(`/api/prompts/${id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
-                    });
+                const response = await fetch(`/api/prompts/${id}/activate`, {method: 'POST'});
+                if (response.ok) {
+                    loadPrompts();
                 } else {
-                    // 创建
-                    await fetch('/api/prompts', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
-                    });
+                    alert('激活失败');
                 }
-                
-                closeModal();
-                await loadPrompts();
-                alert('✅ 保存成功！');
             } catch (error) {
-                alert('❌ 保存失败');
+                alert('激活失败: ' + error.message);
             }
-        });
+        }
 
-        /**
-         * 点击模态框外部关闭
-         */
-        window.onclick = function(event) {
-            const modal = document.getElementById('promptModal');
-            if (event.target == modal) {
-                closeModal();
-            }
-        }
-        
-        // ============================================
-        // 手动触发功能
-        // ============================================
-        
-        /**
-         * 手动触发健康检测
-         */
-        async function triggerHealthCheck() {
+        // 删除提示词
+        async function deletePrompt(id) {
+            if (!confirm('确定要删除此提示词吗?')) return;
+            
             try {
-                const response = await fetch('/api/dashboard/trigger-health-check', { method: 'POST' });
-                const data = await response.json();
-                alert('✅ 健康检测已触发，请稍后查看结果');
-                
-                // 5秒后刷新数据
-                setTimeout(async () => {
-                    await loadHealthStatus();
-                    await loadSystemStatus();
-                }, 5000);
+                const response = await fetch(`/api/prompts/${id}`, {method: 'DELETE'});
+                if (response.ok) {
+                    loadPrompts();
+                } else {
+                    alert('删除失败');
+                }
             } catch (error) {
-                alert('❌ 触发失败: ' + error.message);
+                alert('删除失败: ' + error.message);
             }
         }
-        
-        /**
-         * 手动触发性能测试
-         */
-        async function triggerPerformanceTest() {
-            try {
-                const response = await fetch('/api/dashboard/trigger-performance-test', { method: 'POST' });
-                const data = await response.json();
-                alert('✅ 性能测试已触发，请稍后查看结果');
-                
-                // 10秒后刷新数据
-                setTimeout(async () => {
-                    await loadPerformanceData();
-                }, 10000);
-            } catch (error) {
-                alert('❌ 触发失败: ' + error.message);
-            }
-        }
-        
-        /**
-         * 刷新LLM状态
-         */
-        async function refreshLLMStatus() {
-            await loadLLMStatus();
-            alert('✅ 状态已刷新！');
-        }
-        
-        // ============================================
-        // 页面初始化
-        // ============================================
-        
-        /**
-         * 加载所有数据
-         */
-        async function loadAllData() {
-            await Promise.all([
-                loadSystemStatus(),
-                loadPreloadStatus(),
-                loadHealthStatus(),
-                loadPerformanceData(),
-                loadLLMStatus(),
-                loadPrompts()
-            ]);
-        }
-        
-        /**
-         * 页面加载完成后初始化
-         */
-        window.onload = async function() {
-            console.log('M3 Agent Dashboard v6.0 - 初始化中...');
-            
-            // 首次加载所有数据
-            await loadAllData();
-            
-            // 每30秒自动刷新
-            setInterval(loadAllData, 30000);
-            
-            console.log('M3 Agent Dashboard v6.0 - 初始化完成');
-        };
+
+        // 初始化
+        setInterval(updateUptime, 1000);
+        setInterval(updateMemoryStatus, 1000);
+        updateUptime();
+        updateMemoryStatus();
+        refreshModels();
+        loadPrompts();
     </script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 """
-A6 System v6.2.0 - Admin Panel
+M3 Agent 管理面板 v6.5.1
 独立运行在端口 8002，提供管理界面和 API
 v5.7.1更新：线程池浏览器+工具池，保留uvloop性能，工具调用速度提升10-20倍
 v5.6更新：修复性能监控定时任务，保持任务引用防止被垃圾回收
@@ -36,7 +36,7 @@ from app.performance.performance_monitor import (
 
 admin_app = FastAPI(
     title="M3 Agent Admin Panel",
-    version="5.7.1"
+    version="6.5.1"
 )
 
 admin_app.add_middleware(
@@ -459,6 +459,12 @@ async def activate_prompt(prompt_id: str):
     
     save_prompts(prompts)
     return {"status": "success"}
+
+# ============================================
+# Chatroom API Routes (v6.4)
+# ============================================
+from chatroom_api import router as chatroom_router
+admin_app.include_router(chatroom_router)
 
 # ============================================
 # Main Entry Point
