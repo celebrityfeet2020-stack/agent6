@@ -92,11 +92,11 @@ jobs:
           push: true
           tags: |
             junpeng999/agent6:latest-arm64
-            junpeng999/agent6:v6.5.3-arm64
+            junpeng999/agent6:v6.5.4-arm64
           build-args: |
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
             VCS_REF=${{ github.sha }}
-            VERSION=v6.5.3
+            VERSION=v6.5.4
           cache-from: type=gha
           cache-to: type=gha,mode=max
       
