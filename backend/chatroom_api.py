@@ -5,6 +5,7 @@
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from typing import Optional, Dict, Any
 import json
 import asyncio
 from datetime import datetime
@@ -14,12 +15,15 @@ router = APIRouter()
 class ChatRequest(BaseModel):
     message: str
     user_id: str = "anonymous"
+    thread_id: Optional[str] = None
+    source: str = "chatroom"
+    metadata: Optional[Dict[str, Any]] = None
 
-@router.get("/api/chat/stream")
-async def chat_stream(message: str, user_id: str = "anonymous"):
+@router.post("/api/chat/stream")
+async def chat_stream(request: ChatRequest):
     """
     SSE流式聊天端点
-    前端通过EventSource连接此端点
+    前端通过fetch POST请求连接此端点
     """
     async def event_generator():
         try:
@@ -39,7 +43,7 @@ async def chat_stream(message: str, user_id: str = "anonymous"):
             
             # 构造输入
             input_data = {
-                "messages": [{"role": "user", "content": message}]
+                "messages": [{"role": "user", "content": request.message}]
             }
             
             # 流式执行workflow

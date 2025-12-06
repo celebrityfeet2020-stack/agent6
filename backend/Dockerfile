@@ -1,17 +1,18 @@
-# Agent System v3.6.0-beta - Fixed admin panel port mapping and system renaming
+# Agent System v3.6.1 - Fixed timezone, tools loading, and performance monitoring
 # Base Image: Playwright (includes Chromium, Firefox, WebKit)
-# This avoids browser compatibility issues
-
 FROM mcr.microsoft.com/playwright/python:v1.49.1-jammy
 
-# Set environment variables
-ENV DEBIAN_FRONTEND=noninteractive \
+# Set timezone to Beijing (Asia/Shanghai) - FIX #1
+ENV TZ=Asia/Shanghai \
+    DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-# Install system dependencies
+# Install system dependencies including tzdata for timezone
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Timezone data - FIX #1
+    tzdata \
     # Tesseract OCR (multiple languages)
     tesseract-ocr \
     tesseract-ocr-eng \
@@ -46,7 +47,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     scrot \
     python3-tk \
     python3-dev \
-    # Cleanup
+    # Cleanup and set timezone
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
+    && echo $TZ > /etc/timezone \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -60,12 +63,10 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Pre-download EasyOCR models to avoid runtime downloads
-# This significantly speeds up first-time startup
+# Pre-download EasyOCR models
 RUN python3 -c "import easyocr; reader = easyocr.Reader(['en', 'ch_sim'], download_enabled=True)"
 
-# Pre-download Whisper small model for Speech Recognition
-# Model size: ~244MB, provides good accuracy and speed balance
+# Pre-download Whisper small model
 RUN python3 -c "import whisper; model = whisper.load_model('small'); print('Whisper small model loaded successfully')"
 
 # Copy application code
