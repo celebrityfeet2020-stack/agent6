@@ -1,0 +1,190 @@
+# =====================================================================
+# M3 Agent v6.5.3 - Production Ready Dockerfile
+# =====================================================================
+# 主要更新:
+# - 修复前端UI缺失问题 (添加完整的前端编译步骤)
+# - 添加EasyOCR和Whisper模型预下载 (解决启动时下载卡顿)
+# - 添加/health和/api/models端点
+# - 添加定时任务逻辑
+# - 使用多阶段构建优化镜像大小
+# =====================================================================
+
+# =====================================================================
+# 阶段 1: 构建前端 (Node.js环境)
+# =====================================================================
+FROM node:18-alpine AS frontend-builder
+
+# 安装 pnpm
+RUN npm install -g pnpm
+
+# 设置工作目录
+WORKDIR /app
+
+# 复制前端package.json和lock文件 (利用Docker缓存)
+COPY chatroom_ui/package.json chatroom_ui/pnpm-lock.yaml ./
+
+# 安装依赖
+RUN pnpm install --frozen-lockfile
+
+# 复制所有前端源代码
+COPY chatroom_ui/ ./
+
+# 编译前端 (生成dist目录)
+RUN pnpm build
+
+# =====================================================================
+# 阶段 2: 构建最终运行镜像 (Python + Playwright环境)
+# =====================================================================
+FROM mcr.microsoft.com/playwright/python:v1.49.1-jammy
+
+# 设置环境变量 (非交互式, 时区, Python缓冲)
+ENV DEBIAN_FRONTEND=noninteractive \
+    TZ=Asia/Shanghai \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+# 配置时区并安装系统依赖
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
+    echo $TZ > /etc/timezone && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+    # 时区数据
+    tzdata \
+    # Tesseract OCR (多语言支持)
+    tesseract-ocr \
+    tesseract-ocr-chi-sim \
+    tesseract-ocr-chi-tra \
+    tesseract-ocr-eng \
+    libtesseract-dev \
+    # PDF处理
+    poppler-utils \
+    # 音视频处理
+    ffmpeg \
+    libavcodec-extra \
+    # Redis工具
+    redis-tools \
+    # 基础工具
+    curl \
+    wget \
+    jq \
+    ca-certificates && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# 设置工作目录
+WORKDIR /app
+
+# 配置pip使用清华镜像源 (避免超时)
+RUN pip3 config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && \
+    pip3 config set global.timeout 300
+
+# 复制并安装Python依赖
+COPY backend/requirements.txt ./requirements.txt
+RUN pip3 install --no-cache-dir --upgrade pip && \
+    pip3 install --no-cache-dir -r requirements.txt
+
+# =====================================================================
+# v6.5.3 关键修复: 预下载EasyOCR和Whisper模型
+# =====================================================================
+# 这一步显著加快首次启动速度，避免运行时下载导致的卡顿
+
+# 预下载EasyOCR模型 (英文 + 简体中文)
+# 模型会被缓存到 ~/.EasyOCR/model/ 目录
+RUN echo "=== Pre-downloading EasyOCR models ===" && \
+    python3 -c "import easyocr; reader = easyocr.Reader(['en', 'ch_sim'], download_enabled=True); print('EasyOCR models downloaded successfully')"
+
+# 预下载Whisper small模型 (语音识别)
+# 模型大小: ~244MB，提供良好的准确度和速度平衡
+RUN echo "=== Pre-downloading Whisper small model ===" && \
+    python3 -c "import whisper; model = whisper.load_model('small'); print('Whisper small model downloaded successfully')"
+
+# =====================================================================
+# 复制应用代码
+# =====================================================================
+COPY backend/ ./backend/
+COPY config/ ./config/
+COPY admin_ui/ ./admin_ui/
+
+# =====================================================================
+# 关键步骤: 从前端构建阶段复制编译产物
+# =====================================================================
+COPY --from=frontend-builder /app/dist /app/chatroom_ui_dist
+
+# 验证关键文件存在
+RUN echo "=== Verifying critical files ===" && \
+    ls -lh /app/backend/chatroom_api.py && \
+    ls -lh /app/backend/admin_app.py && \
+    ls -lh /app/backend/main.py && \
+    ls -lh /app/backend/app/core/background_tasks.py && \
+    ls -lh /app/backend/app/core/state_manager.py && \
+    echo "=== Verifying frontend build ===" && \
+    ls -lh /app/chatroom_ui_dist/ && \
+    ls -lh /app/chatroom_ui_dist/index.html && \
+    echo "=== Verifying model cache ===" && \
+    ls -lh ~/.EasyOCR/model/ && \
+    ls -lh ~/.cache/whisper/ && \
+    echo "=== All critical files and models present ===" || \
+    (echo "ERROR: Missing critical files or models!" && exit 1)
+
+# 安装 Playwright 浏览器
+RUN playwright install chromium
+
+# 创建必要的目录
+RUN mkdir -p /app/logs /app/data /app/uploads
+
+# 暴露端口
+EXPOSE 8888 8889
+
+# 健康检查 (v6.5.3: 使用新的/health端点)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8889/health || exit 1
+
+# 创建启动脚本
+RUN cat > /app/start.sh << 'EOF'
+#!/bin/bash
+set -e
+
+echo "=== M3 Agent v6.5.3 Starting ==="
+echo "Time: $(date)"
+echo "Timezone: $TZ"
+echo ""
+
+cd /app/backend
+
+# 启动 main.py (Agent API on port 8888)
+echo "Starting Agent API on port 8888..."
+python3 main.py &
+MAIN_PID=$!
+
+# 等待 main.py 启动
+sleep 5
+
+# 启动 admin_app.py (管理面板 + 聊天室 on port 8889)
+echo "Starting Admin Panel + Chatroom on port 8889..."
+python3 admin_app.py &
+ADMIN_PID=$!
+
+echo ""
+echo "=== M3 Agent v6.5.3 Started ==="
+echo "Agent API:    http://localhost:8888"
+echo "Admin Panel:  http://localhost:8889/admin"
+echo "Chatroom UI:  http://localhost:8889/chatroom/"
+echo "Health Check: http://localhost:8889/health"
+echo "LLM Models:   http://localhost:8889/api/models"
+echo ""
+echo "v6.5.3 Improvements:"
+echo "- EasyOCR and Whisper models pre-downloaded"
+echo "- /health and /api/models endpoints added"
+echo "- Scheduled tasks for periodic updates"
+echo ""
+
+# 等待进程
+wait $MAIN_PID $ADMIN_PID
+EOF
+
+# 授权启动脚本
+RUN chmod +x /app/start.sh
+
+# 启动命令
+CMD ["/app/start.sh"]
