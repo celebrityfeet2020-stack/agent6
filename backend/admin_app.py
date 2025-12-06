@@ -36,7 +36,7 @@ from app.performance.performance_monitor import (
 
 admin_app = FastAPI(
     title="M3 Agent Admin Panel",
-    version="6.5.6"
+    version="6.5.7"
 )
 
 admin_app.add_middleware(
@@ -354,6 +354,52 @@ admin_app.include_router(chatroom_api_router)
 # ============================================
 # Admin Panel UI Routes
 # ============================================
+
+# v6.5.7: 元提示词API
+@admin_app.get("/api/prompts")
+async def get_prompts():
+    """获取所有元提示词"""
+    import json
+    prompts_file = "/app/data/system_prompts.json"
+    try:
+        with open(prompts_file, "r", encoding="utf-8") as f:
+            prompts = json.load(f)
+        return prompts
+    except Exception as e:
+        return {"error": str(e)}
+
+@admin_app.post("/api/prompts")
+async def save_prompt(prompt_data: dict):
+    """保存新的元提示词"""
+    import json
+    from datetime import datetime
+    prompts_file = "/app/data/system_prompts.json"
+    try:
+        # 读取现有prompts
+        with open(prompts_file, "r", encoding="utf-8") as f:
+            prompts = json.load(f)
+        
+        # 生成ID
+        new_id = f"custom_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        new_prompt = {
+            "id": new_id,
+            "name": prompt_data.get("name", "未命名提示词"),
+            "prompt": prompt_data.get("content", ""),
+            "is_active": False,
+            "created_at": datetime.now().isoformat(),
+            "version": "custom"
+        }
+        
+        # 添加到列表
+        prompts.append(new_prompt)
+        
+        # 保存
+        with open(prompts_file, "w", encoding="utf-8") as f:
+            json.dump(prompts, f, ensure_ascii=False, indent=2)
+        
+        return {"success": True, "id": new_id}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 @admin_app.get("/", response_class=HTMLResponse)
 async def admin_panel(request: Request):

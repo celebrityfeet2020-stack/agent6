@@ -618,8 +618,14 @@ async def stream_chat(request: StreamChatRequest):
     ```
     """
     try:
-        # 导入全局变量
-        from main import app_graph
+        # v6.5.7: 从 app_state 导入 app_graph
+        from main import app_state
+        app_graph = app_state.get("app_graph")
+        
+        if not app_graph:
+            # 如果workflow未初始化,返回错误
+            yield f"data: {json.dumps({'error': 'Agent未初始化,请等待5分钟', 'type': 'error'})}\n\n"
+            return
         
         # 生成thread_id（如果未提供）
         thread_id = request.thread_id or f"thread-{datetime.now().timestamp()}"

@@ -1,0 +1,98 @@
+# ============================================
+# Stage 1: Frontend Build (Chatroom UI)
+# ============================================
+FROM node:22-alpine AS frontend-builder
+
+WORKDIR /build
+
+# Copy frontend source
+COPY chatroom_ui/package.json chatroom_ui/pnpm-lock.yaml ./
+RUN npm install -g pnpm && pnpm install
+
+COPY chatroom_ui/ ./
+
+# Build frontend
+RUN pnpm run build
+
+# Verify build output
+RUN ls -la /build/dist && echo "Frontend build completed"
+
+# ============================================
+# Stage 2: Python Backend + Models
+# ============================================
+FROM mcr.microsoft.com/playwright/python:v1.49.1-jammy
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    tesseract-ocr \
+    tesseract-ocr-chi-sim \
+    tesseract-ocr-eng \
+    ffmpeg \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy backend code
+COPY backend/ /app/backend/
+COPY requirements.txt /app/
+
+# Install Python dependencies
+RUN pip3 install --no-cache-dir -r /app/requirements.txt
+
+# ============================================
+# v6.5.4: Pre-download AI Models
+# ============================================
+
+# Pre-download EasyOCR models (en + ch_sim)
+RUN python3 -c "import easyocr; reader = easyocr.Reader(['en', 'ch_sim'], download_enabled=True); print('EasyOCR models downloaded successfully')"
+
+# Pre-download Whisper small model
+RUN python3 -c "import whisper; model = whisper.load_model('small'); print('Whisper small model downloaded successfully')"
+
+# ============================================
+# Copy Frontend Build Output
+# ============================================
+COPY --from=frontend-builder /build/dist /app/chatroom_ui_dist
+
+# Verify frontend files
+RUN ls -la /app/chatroom_ui_dist && echo "Chatroom UI files copied"
+
+# ============================================
+# Copy Admin UI
+# ============================================
+COPY admin_ui/ /app/admin_ui/
+
+# ============================================
+# Create Data Directory
+# ============================================
+RUN mkdir -p /app/data
+
+# Copy system prompts
+COPY data/system_prompts.json /app/data/
+
+# ============================================
+# Environment Variables
+# ============================================
+ENV PYTHONPATH=/app/backend
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+# ============================================
+# Expose Ports
+# ============================================
+EXPOSE 8888 8889
+
+# ============================================
+# Health Check
+# ============================================
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:8889/health || exit 1
+
+# ============================================
+# Startup Script
+# ============================================
+COPY docker-entrypoint.sh /app/
+RUN chmod +x /app/docker-entrypoint.sh
+
+CMD ["/app/docker-entrypoint.sh"]
