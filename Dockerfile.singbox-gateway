@@ -1,0 +1,78 @@
+FROM alpine:3.19
+
+LABEL maintainer="Manus AI"
+LABEL description="Full-featured Transparent Gateway: sing-box + Mihomo + WireGuard + TPROXY"
+
+# 安装所有必要工具
+RUN apk add --no-cache \
+    # 网络核心工具
+    iptables \
+    ip6tables \
+    nftables \
+    iproute2 \
+    ipset \
+    # WireGuard
+    wireguard-tools \
+    # 基础工具
+    curl \
+    wget \
+    ca-certificates \
+    bash \
+    # 调试工具
+    tcpdump \
+    bind-tools \
+    net-tools \
+    busybox-extras \
+    # 其他依赖
+    openssl \
+    tzdata \
+    && rm -rf /var/cache/apk/*
+
+# 设置时区
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+# 下载并安装sing-box
+ARG SING_BOX_VERSION=1.10.6
+RUN wget -q -O /tmp/sing-box.tar.gz \
+    "https://github.com/SagerNet/sing-box/releases/download/v${SING_BOX_VERSION}/sing-box-${SING_BOX_VERSION}-linux-amd64.tar.gz" \
+    && tar -xzf /tmp/sing-box.tar.gz -C /tmp \
+    && mv /tmp/sing-box-${SING_BOX_VERSION}-linux-amd64/sing-box /usr/local/bin/ \
+    && chmod +x /usr/local/bin/sing-box \
+    && rm -rf /tmp/sing-box* \
+    && sing-box version
+
+# 下载并安装Mihomo (Clash Meta)
+ARG MIHOMO_VERSION=1.18.10
+RUN wget -q -O /tmp/mihomo.gz \
+    "https://github.com/MetaCubeX/mihomo/releases/download/v${MIHOMO_VERSION}/mihomo-linux-amd64-v${MIHOMO_VERSION}.gz" \
+    && gunzip /tmp/mihomo.gz \
+    && mv /tmp/mihomo /usr/local/bin/mihomo \
+    && chmod +x /usr/local/bin/mihomo \
+    && mihomo -v
+
+# 创建配置目录
+RUN mkdir -p \
+    /etc/sing-box \
+    /etc/mihomo \
+    /etc/wireguard \
+    /var/lib/sing-box \
+    /var/lib/mihomo \
+    /var/log/gateway
+
+# 复制启动脚本
+COPY entrypoint.singbox.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# 挂载点
+VOLUME ["/etc/sing-box", "/etc/mihomo", "/etc/wireguard", "/var/lib/sing-box", "/var/lib/mihomo"]
+
+# 暴露端口
+EXPOSE 53/tcp 53/udp 7890/tcp 7891/tcp 9090/tcp
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD ping -c 1 127.0.0.1 || exit 1
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["sing-box"]
