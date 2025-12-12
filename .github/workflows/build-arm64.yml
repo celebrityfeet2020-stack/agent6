@@ -32,6 +32,6 @@ jobs:
           push: true # 构建后立即推送
           tags: | # 为镜像打上多个标签
             junpeng999/agent6:latest-arm64
-            junpeng999/agent6:v6.6.0-rebuilt-arm64
+            junpeng999/agent6:v6.6.4-arm64
           cache-from: type=gha # 使用GitHub Actions的缓存加速构建
           cache-to: type=gha,mode=max

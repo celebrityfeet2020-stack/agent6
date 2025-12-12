@@ -14,6 +14,7 @@ from .telegram_tool import TelegramTool
 from .speech_recognition_tool import SpeechRecognitionTool
 from .rpa_tool import RPATool
 from .file_sync_tool import FileSyncTool
+from .fleet_api_tool_v2 import FleetAPIToolV2
 
 def load_all_tools():
     """
@@ -38,7 +39,8 @@ def load_all_tools():
         GitTool,
         TelegramTool,
         RPATool,
-        FileSyncTool
+        FileSyncTool,
+        FleetAPIToolV2
     ]
     
     errors = {}
@@ -52,7 +54,7 @@ def load_all_tools():
             errors[tool_name] = str(e)
             print(f"  ❌ {tool_name}: {e}")
     
-    print(f"✅ 工具池加载完成: {len(tools)}/15 个工具")
+    print(f"✅ 工具池加载完成: {len(tools)}/16 个工具")
     
     if errors:
         print(f"⚠️  {len(errors)} 个工具加载失败:")
@@ -78,5 +80,6 @@ __all__ = [
     "SpeechRecognitionTool",
     "RPATool",
     "FileSyncTool",
+    "FleetAPIToolV2",
     "load_all_tools",
 ]

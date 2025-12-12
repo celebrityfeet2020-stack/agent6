@@ -7,6 +7,8 @@ import sys
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, FileResponse
 from contextlib import asynccontextmanager
 
 # 添加app目录到Python路径
@@ -128,6 +130,70 @@ app.include_router(chat_router, tags=["Chat"])
 # Phase 4: 挂载管理面板API
 from app.api.dashboard import router as dashboard_router
 app.include_router(dashboard_router, tags=["Dashboard"])
+
+# Phase 5: 挂载LangGraph Cloud兼容API
+from app.api.langgraph_cloud import router as langgraph_router
+app.include_router(langgraph_router, prefix="/api/langgraph", tags=["LangGraph Cloud"])
+
+# Phase 6: 挂载元提示词管理API
+from app.api.meta_prompt import router as meta_prompt_router
+app.include_router(meta_prompt_router, tags=["Meta Prompt"])
+
+# Phase 7: 挂载多维聊天室API
+from app.api.multidimensional_chat import router as multidimensional_chat_router
+app.include_router(multidimensional_chat_router, tags=["Multidimensional Chat"])
+
+# Phase 7.1: 挂载多维聊天室WebSocket API
+from app.api.multidimensional_ws import router as multidimensional_ws_router
+from app.api.multidimensional_chat_sse import router as multidimensional_chat_sse_router
+app.include_router(multidimensional_ws_router, tags=["Multidimensional Chat WebSocket"])
+app.include_router(multidimensional_chat_sse_router, tags=["Multidimensional Chat SSE"])
+
+# Phase 8: 挂载增强型监控API
+from app.api.monitoring import router as monitoring_router
+app.include_router(monitoring_router, tags=["Monitoring"])
+
+# Phase 9: 挂载上下文监控API
+from app.api.context_monitor import router as context_monitor_router
+app.include_router(context_monitor_router, tags=["Context Monitor"])
+
+# Phase 10: 挂载Fleet统计API
+from app.api.fleet_stats import router as fleet_stats_router
+app.include_router(fleet_stats_router, tags=["Fleet Stats"])
+
+
+# ==================== 静态文件和UI路由 ====================
+# 挂载管理面板静态文件
+if os.path.exists("admin_ui/static"):
+    app.mount("/dashboard/static", StaticFiles(directory="admin_ui/static"), name="dashboard_static")
+
+# 管理面板HTML路由
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard():
+    """管理面板"""
+    dashboard_html_path = "admin_ui/templates/dashboard.html"
+    if os.path.exists(dashboard_html_path):
+        with open(dashboard_html_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    else:
+        return HTMLResponse(content="<h1>Dashboard UI 未找到</h1><p>请确保 admin_ui/templates/dashboard.html 存在</p>", status_code=404)
+
+# 多维聊天室HTML路由
+@app.get("/chatroom", response_class=HTMLResponse)
+async def chatroom():
+    """聊天室 - 返回React应用的index.html"""
+    chatroom_html_path = "chatroom_ui/index.html"
+    if os.path.exists(chatroom_html_path):
+        with open(chatroom_html_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    else:
+        return HTMLResponse(content="<h1>Chatroom UI 未找到</h1><p>请确保 chatroom_ui/index.html 存在或运行 'cd chatroom_ui && pnpm install && pnpm build'</p>", status_code=404)
+
+# 挂载聊天室静态文件
+if os.path.exists("chatroom_ui/dist"):
+    app.mount("/chatroom/assets", StaticFiles(directory="chatroom_ui/dist/assets"), name="chatroom_assets")
+elif os.path.exists("chatroom_ui/static"):
+    app.mount("/chatroom/static", StaticFiles(directory="chatroom_ui/static"), name="chatroom_static")
 
 
 if __name__ == "__main__":

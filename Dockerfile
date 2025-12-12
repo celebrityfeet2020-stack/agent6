@@ -5,11 +5,14 @@ FROM python:3.11-slim
 # 设置工作目录
 WORKDIR /app
 
-# 安装系统依赖
+# 安装系统依赖和Node.js
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
     git \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g pnpm \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制requirements.txt并安装Python依赖
@@ -25,6 +28,12 @@ RUN echo "🔧 预下载EasyOCR模型..." && \
 # 复制整个项目
 COPY . .
 
+# 构建聊天室前端
+RUN cd chatroom_ui && \
+    pnpm install && \
+    pnpm build && \
+    echo "✅ 聊天室前端构建完成"
+
 # 创建数据和日志目录
 RUN mkdir -p /app/data /app/logs
 
@@ -33,7 +42,7 @@ ENV TZ=Asia/Shanghai
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # 暴露端口
-EXPOSE 8888
+EXPOSE 12111
 
 # 启动命令
 CMD ["python3", "main.py"]

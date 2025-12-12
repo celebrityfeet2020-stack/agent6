@@ -35,8 +35,10 @@ class StateManager:
         self.system_start_time = datetime.now()
         self.tool_pool_loaded = False
         self.browser_pool_loaded = False
+        self.model_pool_loaded = False
         self.tool_pool_load_time: Optional[datetime] = None
         self.browser_pool_load_time: Optional[datetime] = None
+        self.model_pool_load_time: Optional[datetime] = None
         
         # LangGraph核心工作流
         self.app_graph = None  # 将在启动时由workflow模块设置

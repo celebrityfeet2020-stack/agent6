@@ -1,0 +1,300 @@
+import { create } from 'zustand';
+
+/**
+ * 消息类型定义
+ */
+export interface Message {
+  id: string;
+  timestamp: string;
+  type: 'message' | 'thought' | 'tool' | 'system';
+  role?: 'user' | 'assistant';
+  source?: string; // user/api/admin/livestream/fleet
+  content: string;
+  metadata?: Record<string, any>;
+  // Generative UI相关
+  component?: string; // 组件名称
+  componentProps?: Record<string, any>; // 组件props
+}
+
+/**
+ * 思维链步骤
+ */
+export interface ThoughtStep {
+  id: string;
+  timestamp: string;
+  content: string;
+  status: 'thinking' | 'completed';
+}
+
+/**
+ * 工具调用
+ */
+export interface ToolCall {
+  id: string;
+  timestamp: string;
+  tool_name: string;
+  status: 'calling' | 'success' | 'error';
+  input?: Record<string, any>;
+  output?: any;
+  error?: string;
+}
+
+/**
+ * 聊天状态
+ */
+interface ChatState {
+  messages: Message[];
+  thoughts: ThoughtStep[];
+  toolCalls: ToolCall[];
+  isConnected: boolean;
+  isLoading: boolean;
+  error: string | null;
+  
+  // Actions
+  addMessage: (message: Message) => void;
+  addThought: (thought: ThoughtStep) => void;
+  addToolCall: (toolCall: ToolCall) => void;
+  updateToolCall: (id: string, updates: Partial<ToolCall>) => void;
+  setConnected: (connected: boolean) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  clearMessages: () => void;
+}
+
+/**
+ * Zustand Store
+ */
+export const useChatStore = create<ChatState>((set) => ({
+  messages: [],
+  thoughts: [],
+  toolCalls: [],
+  isConnected: false,
+  isLoading: false,
+  error: null,
+  
+  addMessage: (message) => set((state) => ({
+    messages: [...state.messages, message],
+  })),
+  
+  addThought: (thought) => set((state) => ({
+    thoughts: [...state.thoughts, thought],
+  })),
+  
+  addToolCall: (toolCall) => set((state) => ({
+    toolCalls: [...state.toolCalls, toolCall],
+  })),
+  
+  updateToolCall: (id, updates) => set((state) => ({
+    toolCalls: state.toolCalls.map((tc) =>
+      tc.id === id ? { ...tc, ...updates } : tc
+    ),
+  })),
+  
+  setConnected: (connected) => set({ isConnected: connected }),
+  setLoading: (loading) => set({ isLoading: loading }),
+  setError: (error) => set({ error }),
+  clearMessages: () => set({ messages: [], thoughts: [], toolCalls: [] }),
+}));
+
+/**
+ * useChat Hook
+ * 
+ * 核心功能:
+ * - 发送消息到后端API
+ * - 监听SSE事件流
+ * - 更新Zustand状态
+ * - 处理文件上传
+ */
+export const useChat = () => {
+  const {
+    messages,
+    thoughts,
+    toolCalls,
+    isConnected,
+    isLoading,
+    error,
+    addMessage,
+    addThought,
+    addToolCall,
+    updateToolCall,
+    setConnected,
+    setLoading,
+    setError,
+    clearMessages,
+  } = useChatStore();
+  
+  /**
+   * WebSocket连接
+   */
+  let ws: WebSocket | null = null;
+  
+  /**
+   * 连接WebSocket
+   */
+  const connectWebSocket = (threadId: string = 'default_session') => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      return; // 已连接
+    }
+    
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/api/multidimensional/chat/ws?thread_id=${threadId}`;
+    
+    ws = new WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+      console.log('WebSocket connected');
+      setConnected(true);
+      setError(null);
+    };
+    
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        handleWebSocketMessage(data);
+      } catch (e) {
+        console.error('Failed to parse WebSocket message:', e);
+      }
+    };
+    
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      setError('WebSocket连接错误');
+    };
+    
+    ws.onclose = () => {
+      console.log('WebSocket closed');
+      setConnected(false);
+      // 5秒后自动重连
+      setTimeout(() => connectWebSocket(threadId), 5000);
+    };
+  };
+  
+  /**
+   * 处理WebSocket消息
+   */
+  const handleWebSocketMessage = (data: any) => {
+    const { type } = data;
+    
+    switch (type) {
+      case 'text':
+      case 'message':
+        // 普通消息
+        addMessage({
+          id: data.id || `msg-${Date.now()}`,
+          timestamp: data.timestamp || new Date().toISOString(),
+          type: 'message',
+          role: data.role_type === 'user' ? 'user' : 'assistant',
+          source: data.role_type || 'assistant',
+          content: data.content || '',
+          metadata: data.metadata,
+          component: data.component,
+          componentProps: data.componentProps,
+        });
+        break;
+      
+      case 'tool_call':
+        // 工具调用
+        addToolCall({
+          id: data.id || `tool-${Date.now()}`,
+          timestamp: data.timestamp || new Date().toISOString(),
+          tool_name: data.tool_name || '',
+          status: 'calling',
+          input: data.input,
+        });
+        break;
+      
+      case 'tool_result':
+        // 工具结果
+        updateToolCall(data.tool_call_id, {
+          status: data.error ? 'error' : 'success',
+          output: data.output,
+          error: data.error,
+        });
+        break;
+      
+      case 'system':
+        // 系统消息
+        console.log('[System]', data.content);
+        break;
+      
+      default:
+        console.warn('Unknown WebSocket message type:', type);
+    }
+  };
+  
+  /**
+   * 发送消息
+   */
+  const sendMessage = async (
+    text: string,
+    files: File[] = [],
+    threadId: string = 'default_session',
+    source: string = 'user'
+  ) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // 1. 如果有文件,先上传文件
+      let fileUrls: string[] = [];
+      if (files.length > 0) {
+        // TODO: 实现文件上传API
+        // fileUrls = await uploadFiles(files);
+        console.log('Files to upload:', files);
+      }
+      
+      // 2. 添加用户消息到UI
+      const userMessage: Message = {
+        id: `msg-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        type: 'message',
+        role: 'user',
+        source,
+        content: text,
+        metadata: {
+          files: fileUrls,
+        },
+      };
+      addMessage(userMessage);
+      
+      // 3. 确保WebSocket已连接
+      connectWebSocket(threadId);
+      
+      // 4. 通过WebSocket发送消息
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        const message = {
+          type: 'user_message',
+          content: text,
+          role_type: source,
+          thread_id: threadId,
+          metadata: {
+            files: fileUrls,
+            user_agent: navigator.userAgent,
+          },
+        };
+        ws.send(JSON.stringify(message));
+        setLoading(false);
+      } else {
+        throw new Error('WebSocket未连接');
+      }
+    } catch (err) {
+      console.error('Error sending message:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      setLoading(false);
+      setConnected(false);
+    }
+  };
+  
+  // SSE处理已移除,使用WebSocket替代
+  
+  return {
+    messages,
+    thoughts,
+    toolCalls,
+    isConnected,
+    isLoading,
+    error,
+    sendMessage,
+    clearMessages,
+  };
+};

@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M3 Agent 管理面板 v6.0</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 20px; }
+        .header h1 { font-size: 32px; margin-bottom: 10px; }
+        
+        /* 2-2-2布局 */
+        .grid-2x2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 20px; }
+        .grid-3x3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px; }
+        .grid-full { display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 20px; }
+        
+        .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .card h2 { font-size: 18px; margin-bottom: 15px; color: #333; }
+        .status { display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 14px; font-weight: 500; }
+        .status.running { background: #10b981; color: white; }
+        .status.healthy { background: #10b981; color: white; }
+        .status.degraded { background: #f59e0b; color: white; }
+        .status.error { background: #ef4444; color: white; }
+        .model-info { background: #f9fafb; padding: 15px; border-radius: 8px; margin: 10px 0; }
+        .model-info p { margin: 5px 0; color: #666; font-size: 14px; }
+        .model-info strong { color: #333; }
+        .badge { display: inline-block; padding: 3px 10px; background: #3b82f6; color: white; border-radius: 12px; font-size: 12px; margin-left: 10px; }
+        button { background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; margin: 5px; }
+        button:hover { background: #5568d3; }
+        button.danger { background: #ef4444; }
+        button.danger:hover { background: #dc2626; }
+        button.success { background: #10b981; }
+        button.success:hover { background: #059669; }
+        button.small { padding: 5px 12px; font-size: 12px; }
+        .tools-list { list-style: none; }
+        .tools-list li { padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+        .tools-list li:last-child { border-bottom: none; }
+        .note { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 15px 0; border-radius: 4px; font-size: 14px; }
+        .note.success { background: #d1fae5; border-left-color: #10b981; }
+        .note.info { background: #dbeafe; border-left-color: #3b82f6; }
+        
+        /* 性能指标样式 */
+        .perf-metric { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
+        .perf-metric:last-child { border-bottom: none; }
+        .perf-label { color: #666; font-size: 14px; }
+        .perf-value { color: #333; font-size: 16px; font-weight: 600; }
+        .perf-value.good { color: #10b981; }
+        .perf-value.warning { color: #f59e0b; }
+        .perf-value.error { color: #ef4444; }
+        .perf-timestamp { color: #999; font-size: 12px; margin-top: 10px; text-align: right; }
+        
+        /* 大数字卡片 */
+        .big-number { text-align: center; padding: 20px; }
+        .big-number .number { font-size: 48px; font-weight: 700; color: #667eea; margin: 10px 0; }
+        .big-number .label { font-size: 14px; color: #666; }
+        .big-number .sublabel { font-size: 12px; color: #999; margin-top: 5px; }
+        
+        /* 响应式布局 */
+        @media (max-width: 1024px) {
+            .grid-3x3 { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .grid-2x2, .grid-3x3 { grid-template-columns: 1fr; }
+        }
+        
+        /* 元提示词样式 */
+        .prompt-item { background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #e5e7eb; }
+        .prompt-item.active { border-left-color: #10b981; background: #d1fae5; }
+        .prompt-item h3 { font-size: 16px; margin-bottom: 8px; color: #333; }
+        .prompt-item .prompt-meta { font-size: 12px; color: #999; margin-bottom: 8px; }
+        .prompt-item .prompt-content { font-size: 14px; color: #666; margin-bottom: 10px; white-space: pre-wrap; max-height: 100px; overflow-y: auto; background: white; padding: 10px; border-radius: 4px; }
+        .prompt-item .prompt-actions { display: flex; gap: 5px; }
+        
+        /* 模态框样式 */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        .modal-content { background: white; margin: 50px auto; padding: 30px; border-radius: 10px; max-width: 600px; max-height: 80vh; overflow-y: auto; }
+        .modal-content h2 { margin-bottom: 20px; }
+        .modal-content label { display: block; margin-top: 15px; margin-bottom: 5px; font-weight: 600; color: #333; }
+        .modal-content input, .modal-content textarea { width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-family: inherit; }
+        .modal-content textarea { min-height: 150px; resize: vertical; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 M3 Agent 管理面板 v6.0</h1>
+            <p>智能延迟预加载 | 定时健康检测 | 性能监控 | 实时状态汇报</p>
+        </div>
+
+        <div class="note success">
+            ✅ <strong>v6.0 新特性：</strong>启动后15分钟预加载内存 | 每30分钟健康检测 | 每30分钟性能测试(错开15分钟) | 自动恢复机制 | 完整Dashboard API
+        </div>
+
+        <!-- 第一行：系统状态概览 (3个卡片) -->
+        <div class="grid-3x3">
+            <!-- 系统运行时间 -->
+            <div class="card">
+                <div class="big-number">
+                    <div class="label">系统运行时间</div>
+                    <div class="number" id="uptime-display">--</div>
+                    <div class="sublabel" id="started-at">启动时间: --</div>
+                </div>
+            </div>
+
+            <!-- 预加载状态 -->
+            <div class="card">
+                <div class="big-number">
+                    <div class="label">内存预加载</div>
+                    <div class="number" id="preload-status-icon">⏳</div>
+                    <div class="sublabel" id="preload-time">等待中...</div>
+                </div>
+            </div>
+
+            <!-- 整体健康状态 -->
+            <div class="card">
+                <div class="big-number">
+                    <div class="label">整体健康状态</div>
+                    <div class="number" id="overall-health-icon">🟢</div>
+                    <div class="sublabel" id="overall-health-text">健康</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第二行：LLM后端状态 + Agent API状态 -->
+        <div class="grid-2x2">
+            <!-- LLM 后端状态 -->
+            <div class="card">
+                <h2>🤖 LLM 后端状态</h2>
+                <span class="status running" id="llm-status">运行中</span>
+                <div class="model-info">
+                    <p><strong>API 地址:</strong> <span id="base-url" style="font-size: 12px;">加载中...</span></p>
+                    <p><strong>当前模型:</strong> <span id="current-model">加载中...</span></p>
+                    <p><strong>可用模型:</strong></p>
+                    <ul id="available-models" class="tools-list" style="max-height: 150px; overflow-y: auto;">
+                        <li>加载中...</li>
+                    </ul>
+                </div>
+                <button onclick="refreshLLMStatus()">🔄 刷新状态</button>
+            </div>
+
+            <!-- Agent API 状态 -->
+            <div class="card">
+                <h2>🧠 Agent API 状态</h2>
+                <span class="status running">运行中</span>
+                <div class="model-info">
+                    <p><strong>配置模型:</strong> <span id="agent-model">加载中...</span></p>
+                    <p><strong>工具数量:</strong> <span id="tools-count">加载中...</span></p>
+                    <p><strong>API 端口:</strong> <span id="api-port">加载中...</span></p>
+                    <p><strong>最后检测:</strong> <span id="last-check-time">--</span></p>
+                </div>
+                <button onclick="triggerHealthCheck()" class="success">🔍 立即检测</button>
+            </div>
+        </div>
+
+        <!-- 第三行：模型性能 + API性能 + 内存状态 -->
+        <div class="grid-3x3">
+            <!-- 模型性能 -->
+            <div class="card">
+                <h2>⚡ 模型性能</h2>
+                <div class="model-info">
+                    <div class="perf-metric">
+                        <span class="perf-label">Tokens/s（吞吐量）</span>
+                        <span class="perf-value good" id="tokens-per-second">--</span>
+                    </div>
+                    <div class="perf-metric">
+                        <span class="perf-label">TTFT（首token延迟）</span>
+                        <span class="perf-value" id="ttft">-- ms</span>
+                    </div>
+                    <div class="perf-metric">
+                        <span class="perf-label">总延迟</span>
+                        <span class="perf-value" id="total-latency">-- ms</span>
+                    </div>
+                    <div class="perf-timestamp" id="model-perf-updated">--</div>
+                </div>
+                <button onclick="triggerPerformanceTest()" class="success small">🚀 立即测试</button>
+            </div>
+
+            <!-- API 性能 -->
+            <div class="card">
+                <h2>📊 API 性能</h2>
+                <div class="model-info">
+                    <div class="perf-metric">
+                        <span class="perf-label">平均响应时间</span>
+                        <span class="perf-value" id="api-response-time">-- ms</span>
+                    </div>
+                    <div class="perf-metric">
+                        <span class="perf-label">请求总数</span>
+                        <span class="perf-value" id="total-requests">--</span>
+                    </div>
+                    <div class="perf-metric">
+                        <span class="perf-label">成功率</span>
+                        <span class="perf-value good" id="success-rate">--%</span>
+                    </div>
+                    <div class="perf-metric">
+                        <span class="perf-label">每小时请求数</span>
+                        <span class="perf-value" id="requests-per-hour">--</span>
+                    </div>
+                    <div class="perf-timestamp" id="api-perf-updated">--</div>
+                </div>
+            </div>
+
+            <!-- 内存状态 -->
+            <div class="card">
+                <h2>💾 内存状态</h2>
+                <div class="model-info">
+                    <div class="perf-metric">
+                        <span class="perf-label">RSS内存</span>
+                        <span class="perf-value" id="memory-rss">-- MB</span>
+                    </div>
+                    <div class="perf-metric">
+                        <span class="perf-label">VMS内存</span>
+                        <span class="perf-value" id="memory-vms">-- MB</span>
+                    </div>
+                    <div class="perf-metric">
+                        <span class="perf-label">内存占用率</span>
+                        <span class="perf-value" id="memory-percent">--%</span>
+                    </div>
+                    <div class="perf-timestamp" id="memory-updated">--</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第四行：健康检测详情 -->
+        <div class="grid-full">
+            <div class="card">
+                <h2>🏥 健康检测详情</h2>
+                <div class="grid-2x2" style="margin-top: 15px;">
+                    <div class="model-info">
+                        <h3 style="margin-bottom: 10px;">🔧 工具状态</h3>
+                        <div class="perf-metric">
+                            <span class="perf-label">可用工具数</span>
+                            <span class="perf-value" id="health-tools-count">--</span>
+                        </div>
+                        <div class="perf-metric">
+                            <span class="perf-label">工具状态</span>
+                            <span class="perf-value" id="health-tools-status">--</span>
+                        </div>
+                    </div>
+                    <div class="model-info">
+                        <h3 style="margin-bottom: 10px;">🔌 API状态</h3>
+                        <div class="perf-metric">
+                            <span class="perf-label">Fleet API</span>
+                            <span class="perf-value" id="health-fleet-api">--</span>
+                        </div>
+                        <div class="perf-metric">
+                            <span class="perf-label">LangGraph API</span>
+                            <span class="perf-value" id="health-langgraph-api">--</span>
+                        </div>
+                        <div class="perf-metric">
+                            <span class="perf-label">LLM连接</span>
+                            <span class="perf-value" id="health-llm-connection">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第五行：元提示词管理 -->
+        <div class="grid-full">
+            <div class="card">
+                <h2>📝 元提示词管理 <span class="badge" id="active-prompt-badge">无激活</span></h2>
+                <div style="margin-bottom: 15px;">
+                    <button onclick="showCreatePromptModal()" class="success">➕ 创建新元提示词</button>
+                    <button onclick="loadMetaPrompts()">🔄 刷新列表</button>
+                    <button onclick="deactivateAllPrompts()" class="danger">❌ 取消激活</button>
+                </div>
+                <div id="meta-prompts-list" style="max-height: 400px; overflow-y: auto;">
+                    <p style="color: #999; text-align: center; padding: 20px;">加载中...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第六行：上下文监控 -->
+        <div class="grid-full">
+            <div class="card">
+                <h2>📊 上下文监控</h2>
+                <div id="context-monitor-content">
+                    <p style="color: #999; text-align: center; padding: 20px;">加载中...</p>
+                </div>
+                <div style="margin-top: 15px;">
+                    <button onclick="loadContextMonitor()" class="small">🔄 刷新</button>
+                    <button onclick="compressContext()" class="small" style="background: #f59e0b;">🗃️ 压缩上下文</button>
+                    <button onclick="resetContext()" class="danger small">🔄 重置上下文</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第七行：监控功能 -->
+        <div class="grid-2x2">
+            <!-- Fleet记忆统计 -->
+            <div class="card">
+                <h2>💾 Fleet记忆库统计</h2>
+                <div id="fleet-stats-content">
+                    <p style="color: #999; text-align: center; padding: 20px;">加载中...</p>
+                </div>
+                <button onclick="loadFleetStats()" class="small">🔄 刷新</button>
+            </div>
+            
+            <!-- 工具使用统计 -->
+            <div class="card">
+                <h2>🛠️ 工具使用统计</h2>
+                <div id="tool-usage-chart" style="width: 100%; height: 350px;"></div>
+                <button onclick="loadToolUsage()" class="small">🔄 刷新</button>
+            </div>
+        </div>
+
+        <!-- 第七行：实时日志流 -->
+        <div class="grid-full">
+            <div class="card">
+                <h2>📜 实时日志流 <span class="badge" id="log-status-badge" style="background: #999;">未连接</span></h2>
+                <div style="margin-bottom: 15px;">
+                    <button onclick="connectLogStream()" class="success small" id="connect-log-btn">▶️ 连接</button>
+                    <button onclick="disconnectLogStream()" class="danger small" id="disconnect-log-btn" disabled>⏸️ 断开</button>
+                    <button onclick="clearLogs()" class="small">🗑️ 清空</button>
+                    <label style="margin-left: 20px;">
+                        <input type="checkbox" id="auto-scroll-checkbox" checked> 自动滚动
+                    </label>
+                    <label style="margin-left: 10px;">
+                        筛选级别:
+                        <select id="log-level-filter" onchange="filterLogs()">
+                            <option value="ALL">全部</option>
+                            <option value="INFO">INFO</option>
+                            <option value="WARNING">WARNING</option>
+                            <option value="ERROR">ERROR</option>
+                        </select>
+                    </label>
+                </div>
+                <div id="log-container" style="background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 12px; max-height: 400px; overflow-y: auto; line-height: 1.6;">
+                    <div style="color: #888;">点击“连接”按钮开始接收实时日志...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第八行：可用工具列表 -->
+        <div class="grid-full">
+            <div class="card">
+                <h2>🛠️ 可用工具 (<span id="tools-count-display">15</span>个)</h2>
+                <ul class="tools-list">
+                    <li>✅ <strong>Web Search</strong> - 网页搜索 (DuckDuckGo)</li>
+                    <li>✅ <strong>Web Scraper</strong> - 网页抓取 (BeautifulSoup4)</li>
+                    <li>✅ <strong>Browser Automation</strong> - 浏览器自动化 (Playwright)</li>
+                    <li>✅ <strong>Code Executor</strong> - 代码执行 (Docker沙盒)</li>
+                    <li>✅ <strong>File Operations</strong> - 文件操作</li>
+                    <li>✅ <strong>Image OCR</strong> - 图像文字识别 (EasyOCR + Tesseract)</li>
+                    <li>✅ <strong>Image Analysis</strong> - 图像分析</li>
+                    <li>✅ <strong>Data Analysis</strong> - 数据分析 (Pandas + Matplotlib)</li>
+                    <li>✅ <strong>SSH Tool</strong> - SSH 远程执行</li>
+                    <li>✅ <strong>Git Tool</strong> - Git 仓库管理</li>
+                    <li>✅ <strong>Universal API</strong> - 通用 API 调用</li>
+                    <li>✅ <strong>Telegram Tool</strong> - Telegram 机器人</li>
+                    <li>✅ <strong>Speech Recognition</strong> - 语音识别 (Whisper)</li>
+                    <li>✅ <strong>RPA Tool</strong> - RPA自动化</li>
+                    <li>✅ <strong>File Sync</strong> - 文件同步</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- 元提示词创建/编辑模态框 -->
+    <div id="promptModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modal-title">创建新元提示词</h2>
+            <form id="promptForm" onsubmit="return false;">
+                <input type="hidden" id="prompt-id" value="">
+                
+                <label for="prompt-name">名称 *</label>
+                <input type="text" id="prompt-name" required placeholder="例如: 专业Python开发助手">
+                
+                <label for="prompt-content">内容 *</label>
+                <textarea id="prompt-content" required placeholder="输入元提示词内容..."></textarea>
+                
+                <label for="prompt-tags">标签 (逗号分隔)</label>
+                <input type="text" id="prompt-tags" placeholder="例如: python,开发,代码">
+                
+                <label for="prompt-description">描述</label>
+                <textarea id="prompt-description" style="min-height: 80px;" placeholder="简要描述该元提示词的用途..."></textarea>
+                
+                <div class="modal-actions">
+                    <button type="button" onclick="closePromptModal()">取消</button>
+                    <button type="button" onclick="saveMetaPrompt()" class="success">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // 时间处理工具函数（修复：统一使用北京时间）
+        // ============================================
+        
+        /**
+         * 将ISO时间字符串转换为北京时间显示
+         * @param {string} isoString - ISO 8601格式的时间字符串
+         * @returns {string} 北京时间格式化字符串
+         */
+        function toBeijingTime(isoString) {
+            if (!isoString) return '--';
+            
+            try {
+                const date = new Date(isoString);
+                
+                // 转换为北京时间 (UTC+8)
+                const beijingTime = new Date(date.getTime() + (8 * 60 * 60 * 1000));
+                
+                // 格式化为: 2024-12-05 12:30:45
+                const year = beijingTime.getUTCFullYear();
+                const month = String(beijingTime.getUTCMonth() + 1).padStart(2, '0');
+                const day = String(beijingTime.getUTCDate()).padStart(2, '0');
+                const hours = String(beijingTime.getUTCHours()).padStart(2, '0');
+                const minutes = String(beijingTime.getUTCMinutes()).padStart(2, '0');
+                const seconds = String(beijingTime.getUTCSeconds()).padStart(2, '0');
+                
+                return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+            } catch (e) {
+                console.error('时间转换失败:', e);
+                return isoString;
+            }
+        }
+        
+        /**
+         * 格式化运行时间
+         * @param {number} seconds - 运行秒数
+         * @returns {string} 格式化的运行时间
+         */
+        function formatUptime(seconds) {
+            if (!seconds) return '--';
+            
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            
+            if (days > 0) {
+                return `${days}天 ${hours}小时 ${minutes}分钟`;
+            } else if (hours > 0) {
+                return `${hours}小时 ${minutes}分钟`;
+            } else if (minutes > 0) {
+                return `${minutes}分钟 ${secs}秒`;
+            } else {
+                return `${secs}秒`;
+            }
+        }
+
+        // ============================================
+        // v6.0 Dashboard API 集成
+        // ============================================
+        
+        /**
+         * 加载系统状态（v6.0新API）
+         */
+        async function loadSystemStatus() {
+            try {
+                const response = await fetch('/api/dashboard/status');
+                const data = await response.json();
+                
+                // 更新运行时间
+                if (data.details && data.details.uptime_formatted) {
+                    document.getElementById('uptime-display').textContent = data.details.uptime_formatted;
+                }
+                
+                if (data.details && data.details.started_at) {
+                    document.getElementById('started-at').textContent = `启动时间: ${toBeijingTime(data.details.started_at)}`;
+                }
+                
+                // 更新整体健康状态
+                if (data.summary) {
+                    const overall = data.summary.overall;
+                    const healthIcon = document.getElementById('overall-health-icon');
+                    const healthText = document.getElementById('overall-health-text');
+                    
+                    if (overall === 'healthy') {
+                        healthIcon.textContent = '🟢';
+                        healthText.textContent = '健康';
+                        healthText.style.color = '#10b981';
+                    } else if (overall === 'degraded') {
+                        healthIcon.textContent = '🟡';
+                        healthText.textContent = '降级';
+                        healthText.style.color = '#f59e0b';
+                    } else {
+                        healthIcon.textContent = '🔴';
+                        healthText.textContent = '异常';
+                        healthText.style.color = '#ef4444';
+                    }
+                    
+                    // 更新最后检测时间
+                    if (data.summary.last_check) {
+                        document.getElementById('last-check-time').textContent = toBeijingTime(data.summary.last_check);
+                    }
+                }
+                
+            } catch (error) {
+                console.error('加载系统状态失败:', error);
+            }
+        }
+        
+        /**
+         * 加载预加载状态
+         */
+        async function loadPreloadStatus() {
+            try {
+                const response = await fetch('/api/dashboard/preload-status');
+                const data = await response.json();
+                
+                const icon = document.getElementById('preload-status-icon');
+                const time = document.getElementById('preload-time');
+                
+                if (data.completed) {
+                    icon.textContent = '✅';
+                    time.textContent = `完成于: ${toBeijingTime(data.preload_time)}`;
+                    time.style.color = '#10b981';
+                } else {
+                    icon.textContent = '⏳';
+                    time.textContent = '等待中... (T+15分钟)';
+                    time.style.color = '#f59e0b';
+                }
+                
+            } catch (error) {
+                console.error('加载预加载状态失败:', error);
+            }
+        }
+        
+        /**
+         * 加载健康检测结果
+         */
+        async function loadHealthStatus() {
+            try {
+                const response = await fetch('/api/dashboard/health');
+                const result = await response.json();
+                
+                if (result.status === 'pending') {
+                    return; // 还未执行首次检测
+                }
+                
+                const data = result.data;
+                
+                // 更新工具状态
+                if (data.tools) {
+                    document.getElementById('health-tools-count').textContent = data.tools.count || '--';
+                    document.getElementById('health-tools-status').textContent = data.tools.status === 'available' ? '✅ 可用' : '❌ 不可用';
+                }
+                
+                // 更新API状态
+                if (data.apis) {
+                    document.getElementById('health-fleet-api').textContent = data.apis.fleet === 'available' ? '✅' : '❌';
+                    document.getElementById('health-langgraph-api').textContent = data.apis.langgraph === 'available' ? '✅' : '❌';
+                    
+                    if (data.apis.llm) {
+                        const llmStatus = data.apis.llm.status === 'connected' ? '✅ 已连接' : '❌ 断开';
+                        document.getElementById('health-llm-connection').textContent = llmStatus;
+                    }
+                }
+                
+            } catch (error) {
+                console.error('加载健康状态失败:', error);
+            }
+        }
+        
+        /**
+         * 加载性能测试结果
+         */
+        async function loadPerformanceData() {
+            try {
+                const response = await fetch('/api/dashboard/performance');
+                const result = await response.json();
+                
+                if (result.status === 'pending') {
+                    return; // 还未执行首次测试
+                }
+                
+                const data = result.data;
+                
+                // 更新模型性能
+                if (data.model_performance) {
+                    const mp = data.model_performance;
+                    document.getElementById('tokens-per-second').textContent = mp.tokens_per_second || '--';
+                    document.getElementById('ttft').textContent = mp.ttft_ms ? `${mp.ttft_ms} ms` : '-- ms';
+                    document.getElementById('total-latency').textContent = mp.total_latency_ms ? `${mp.total_latency_ms} ms` : '-- ms';
+                    document.getElementById('model-perf-updated').textContent = `更新时间: ${toBeijingTime(data.timestamp)}`;
+                }
+                
+                // 更新内存状态
+                if (data.memory_status) {
+                    const mem = data.memory_status;
+                    document.getElementById('memory-rss').textContent = mem.rss_mb ? `${mem.rss_mb} MB` : '-- MB';
+                    document.getElementById('memory-vms').textContent = mem.vms_mb ? `${mem.vms_mb} MB` : '-- MB';
+                    document.getElementById('memory-percent').textContent = mem.percent ? `${mem.percent}%` : '--%';
+                    document.getElementById('memory-updated').textContent = `更新时间: ${toBeijingTime(data.timestamp)}`;
+                }
+                
+            } catch (error) {
+                console.error('加载性能数据失败:', error);
+            }
+        }
+        
+        /**
+         * 加载LLM后端状态（兼容旧API）
+         */
+        async function loadLLMStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                // 更新 LLM 后端状态
+                if (data.llm_backend) {
+                    document.getElementById('base-url').textContent = data.llm_backend.base_url;
+                    document.getElementById('current-model').textContent = data.llm_backend.current_model;
+                    
+                    // 更新可用模型列表
+                    const modelsUl = document.getElementById('available-models');
+                    if (data.llm_backend.available_models && data.llm_backend.available_models.length > 0) {
+                        modelsUl.innerHTML = data.llm_backend.available_models.map(model => `<li>${model}</li>`).join('');
+                    } else {
+                        modelsUl.innerHTML = '<li>无可用模型</li>';
+                    }
+                }
+                
+                // 更新 Agent API 状态
+                if (data.agent_api) {
+                    document.getElementById('agent-model').textContent = data.agent_api.configured_model;
+                    document.getElementById('tools-count').textContent = data.agent_api.tools_count;
+                    document.getElementById('tools-count-display').textContent = data.agent_api.tools_count;
+                    document.getElementById('api-port').textContent = data.agent_api.api_port;
+                }
+                
+                // 更新API性能（兼容旧数据）
+                if (data.api_performance) {
+                    const ap = data.api_performance;
+                    document.getElementById('api-response-time').textContent = ap.average_response_time_ms ? `${ap.average_response_time_ms} ms` : '-- ms';
+                    document.getElementById('total-requests').textContent = ap.total_requests || '--';
+                    document.getElementById('success-rate').textContent = ap.success_rate ? `${ap.success_rate}%` : '--%';
+                    document.getElementById('requests-per-hour').textContent = ap.requests_per_hour || '--';
+                    
+                    if (ap.last_updated) {
+                        document.getElementById('api-perf-updated').textContent = `更新时间: ${toBeijingTime(ap.last_updated)}`;
+                    }
+                }
+                
+            } catch (error) {
+                console.error('加载LLM状态失败:', error);
+            }
+        }
+        
+        // ============================================
+        // 手动触发功能
+        // ============================================
+        
+        /**
+         * 手动触发健康检测
+         */
+        async function triggerHealthCheck() {
+            try {
+                const response = await fetch('/api/dashboard/trigger-health-check', { method: 'POST' });
+                const data = await response.json();
+                alert('✅ 健康检测已触发，请稍后查看结果');
+                
+                // 5秒后刷新数据
+                setTimeout(async () => {
+                    await loadHealthStatus();
+                    await loadSystemStatus();
+                }, 5000);
+            } catch (error) {
+                alert('❌ 触发失败: ' + error.message);
+            }
+        }
+        
+        /**
+         * 手动触发性能测试
+         */
+        async function triggerPerformanceTest() {
+            try {
+                const response = await fetch('/api/dashboard/trigger-performance-test', { method: 'POST' });
+                const data = await response.json();
+                alert('✅ 性能测试已触发，请稍后查看结果');
+                
+                // 10秒后刷新数据
+                setTimeout(async () => {
+                    await loadPerformanceData();
+                }, 10000);
+            } catch (error) {
+                alert('❌ 触发失败: ' + error.message);
+            }
+        }
+        
+        /**
+         * 刷新LLM状态
+         */
+        async function refreshLLMStatus() {
+            await loadLLMStatus();
+            alert('✅ 状态已刷新！');
+        }
+        
+        // ============================================
+        // 页面初始化
+        // ============================================
+        
+        /**
+         * 加载所有数据
+         */
+        async function loadAllData() {
+            await Promise.all([
+                loadSystemStatus(),
+                loadPreloadStatus(),
+                loadHealthStatus(),
+                loadPerformanceData(),
+                loadLLMStatus()
+            ]);
+        }
+        
+        // ============================================
+        // 元提示词管理函数
+        // ============================================
+        
+        /**
+         * 加载元提示词列表
+         */
+        async function loadMetaPrompts() {
+            try {
+                const response = await fetch('/api/meta-prompts');
+                const data = await response.json();
+                
+                const listContainer = document.getElementById('meta-prompts-list');
+                
+                if (!data.prompts || data.prompts.length === 0) {
+                    listContainer.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">暂无元提示词，点击上方按钮创建</p>';
+                    return;
+                }
+                
+                let html = '';
+                for (const prompt of data.prompts) {
+                    const isActive = prompt.is_active;
+                    const activeClass = isActive ? 'active' : '';
+                    const activeTag = isActive ? '<span class="badge" style="background: #10b981;">已激活</span>' : '';
+                    
+                    html += `
+                        <div class="prompt-item ${activeClass}">
+                            <h3>${prompt.name} ${activeTag}</h3>
+                            <div class="prompt-meta">
+                                <span>ID: ${prompt.id}</span> | 
+                                <span>创建: ${toBeijingTime(prompt.created_at)}</span> | 
+                                <span>版本: ${prompt.version}</span>
+                                ${prompt.tags && prompt.tags.length > 0 ? ' | <span>标签: ' + prompt.tags.join(', ') + '</span>' : ''}
+                            </div>
+                            ${prompt.description ? '<div style="font-size: 13px; color: #888; margin-bottom: 8px;">' + prompt.description + '</div>' : ''}
+                            <div class="prompt-content">${prompt.content}</div>
+                            <div class="prompt-actions">
+                                ${!isActive ? '<button class="small success" onclick="activatePrompt(\''+prompt.id+'\')">✅ 激活</button>' : ''}
+                                <button class="small" onclick="editPrompt(\''+prompt.id+'\')">✏️ 编辑</button>
+                                <button class="small danger" onclick="deletePrompt(\''+prompt.id+'\')">🗑️ 删除</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                listContainer.innerHTML = html;
+                
+                // 更新激活徽章
+                const activePrompt = data.prompts.find(p => p.is_active);
+                const badge = document.getElementById('active-prompt-badge');
+                if (activePrompt) {
+                    badge.textContent = activePrompt.name;
+                    badge.style.background = '#10b981';
+                } else {
+                    badge.textContent = '无激活';
+                    badge.style.background = '#999';
+                }
+                
+            } catch (error) {
+                console.error('加载元提示词失败:', error);
+                document.getElementById('meta-prompts-list').innerHTML = '<p style="color: #ef4444; text-align: center; padding: 20px;">加载失败: ' + error.message + '</p>';
+            }
+        }
+        
+        /**
+         * 显示创建模态框
+         */
+        function showCreatePromptModal() {
+            document.getElementById('modal-title').textContent = '创建新元提示词';
+            document.getElementById('prompt-id').value = '';
+            document.getElementById('prompt-name').value = '';
+            document.getElementById('prompt-content').value = '';
+            document.getElementById('prompt-tags').value = '';
+            document.getElementById('prompt-description').value = '';
+            document.getElementById('promptModal').style.display = 'block';
+        }
+        
+        /**
+         * 编辑元提示词
+         */
+        async function editPrompt(promptId) {
+            try {
+                const response = await fetch(`/api/meta-prompts/${promptId}`);
+                const data = await response.json();
+                
+                document.getElementById('modal-title').textContent = '编辑元提示词';
+                document.getElementById('prompt-id').value = data.id;
+                document.getElementById('prompt-name').value = data.name;
+                document.getElementById('prompt-content').value = data.content;
+                document.getElementById('prompt-tags').value = data.tags ? data.tags.join(',') : '';
+                document.getElementById('prompt-description').value = data.description || '';
+                document.getElementById('promptModal').style.display = 'block';
+            } catch (error) {
+                alert('加载元提示词失败: ' + error.message);
+            }
+        }
+        
+        /**
+         * 关闭模态框
+         */
+        function closePromptModal() {
+            document.getElementById('promptModal').style.display = 'none';
+        }
+        
+        /**
+         * 保存元提示词
+         */
+        async function saveMetaPrompt() {
+            const promptId = document.getElementById('prompt-id').value;
+            const name = document.getElementById('prompt-name').value.trim();
+            const content = document.getElementById('prompt-content').value.trim();
+            const tags = document.getElementById('prompt-tags').value.trim();
+            const description = document.getElementById('prompt-description').value.trim();
+            
+            if (!name || !content) {
+                alert('名称和内容为必填项');
+                return;
+            }
+            
+            const payload = {
+                name,
+                content,
+                tags: tags ? tags.split(',').map(t => t.trim()).filter(t => t) : [],
+                description: description || null
+            };
+            
+            try {
+                let response;
+                if (promptId) {
+                    // 更新
+                    response = await fetch(`/api/meta-prompts/${promptId}`, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    // 创建
+                    response = await fetch('/api/meta-prompts', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(payload)
+                    });
+                }
+                
+                if (response.ok) {
+                    closePromptModal();
+                    await loadMetaPrompts();
+                    alert('保存成功!');
+                } else {
+                    const error = await response.json();
+                    alert('保存失败: ' + (error.detail || error.message || '未知错误'));
+                }
+            } catch (error) {
+                alert('保存失败: ' + error.message);
+            }
+        }
+        
+        /**
+         * 激活元提示词
+         */
+        async function activatePrompt(promptId) {
+            try {
+                const response = await fetch(`/api/meta-prompts/${promptId}/activate`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    await loadMetaPrompts();
+                    alert('激活成功!');
+                } else {
+                    const error = await response.json();
+                    alert('激活失败: ' + (error.detail || error.message || '未知错误'));
+                }
+            } catch (error) {
+                alert('激活失败: ' + error.message);
+            }
+        }
+        
+        /**
+         * 取消激活所有元提示词
+         */
+        async function deactivateAllPrompts() {
+            if (!confirm('确定要取消激活所有元提示词吗？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/meta-prompts/deactivate', {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    await loadMetaPrompts();
+                    alert('已取消激活');
+                } else {
+                    const error = await response.json();
+                    alert('操作失败: ' + (error.detail || error.message || '未知错误'));
+                }
+            } catch (error) {
+                alert('操作失败: ' + error.message);
+            }
+        }
+        
+        /**
+         * 删除元提示词
+         */
+        async function deletePrompt(promptId) {
+            if (!confirm('确定要删除该元提示词吗？此操作不可恢复！')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/meta-prompts/${promptId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    await loadMetaPrompts();
+                    alert('删除成功');
+                } else {
+                    const error = await response.json();
+                    alert('删除失败: ' + (error.detail || error.message || '未知错误'));
+                }
+            } catch (error) {
+                alert('删除失败: ' + error.message);
+            }
+        }
+        
+        // ============================================
+        // 实时日志流管理
+        // ============================================
+        
+        let logWebSocket = null;
+        let allLogs = [];  // 存储所有日志
+        
+        /**
+         * 连接日志流
+         */
+        function connectLogStream() {
+            if (logWebSocket && logWebSocket.readyState === WebSocket.OPEN) {
+                alert('已经连接了');
+                return;
+            }
+            
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/api/monitoring/logs/stream`;
+            
+            logWebSocket = new WebSocket(wsUrl);
+            
+            logWebSocket.onopen = function() {
+                console.log('日志流已连接');
+                document.getElementById('log-status-badge').textContent = '已连接';
+                document.getElementById('log-status-badge').style.background = '#10b981';
+                document.getElementById('connect-log-btn').disabled = true;
+                document.getElementById('disconnect-log-btn').disabled = false;
+            };
+            
+            logWebSocket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'history') {
+                    // 历史日志
+                    allLogs = data.logs;
+                    renderLogs();
+                } else if (data.type === 'new_log') {
+                    // 新日志
+                    allLogs.push(data.log);
+                    // 保持最多1000条
+                    if (allLogs.length > 1000) {
+                        allLogs.shift();
+                    }
+                    renderLogs();
+                }
+            };
+            
+            logWebSocket.onerror = function(error) {
+                console.error('日志流错误:', error);
+                document.getElementById('log-status-badge').textContent = '错误';
+                document.getElementById('log-status-badge').style.background = '#ef4444';
+            };
+            
+            logWebSocket.onclose = function() {
+                console.log('日志流已断开');
+                document.getElementById('log-status-badge').textContent = '未连接';
+                document.getElementById('log-status-badge').style.background = '#999';
+                document.getElementById('connect-log-btn').disabled = false;
+                document.getElementById('disconnect-log-btn').disabled = true;
+            };
+        }
+        
+        /**
+         * 断开日志流
+         */
+        function disconnectLogStream() {
+            if (logWebSocket) {
+                logWebSocket.close();
+                logWebSocket = null;
+            }
+        }
+        
+        /**
+         * 清空日志
+         */
+        function clearLogs() {
+            allLogs = [];
+            document.getElementById('log-container').innerHTML = '<div style="color: #888;">日志已清空</div>';
+        }
+        
+        /**
+         * 渲染日志
+         */
+        function renderLogs() {
+            const container = document.getElementById('log-container');
+            const levelFilter = document.getElementById('log-level-filter').value;
+            
+            // 过滤日志
+            let filteredLogs = allLogs;
+            if (levelFilter !== 'ALL') {
+                filteredLogs = allLogs.filter(log => log.level === levelFilter);
+            }
+            
+            if (filteredLogs.length === 0) {
+                container.innerHTML = '<div style="color: #888;">暂无日志</div>';
+                return;
+            }
+            
+            // 生成HTML
+            let html = '';
+            for (const log of filteredLogs) {
+                const time = new Date(log.timestamp).toLocaleTimeString('zh-CN', {hour12: false});
+                let levelColor = '#d4d4d4';
+                
+                if (log.level === 'ERROR') {
+                    levelColor = '#f48771';
+                } else if (log.level === 'WARNING') {
+                    levelColor = '#dcdcaa';
+                } else if (log.level === 'INFO') {
+                    levelColor = '#4ec9b0';
+                }
+                
+                html += `<div style="margin-bottom: 5px;">`;
+                html += `<span style="color: #858585;">[${time}]</span> `;
+                html += `<span style="color: ${levelColor}; font-weight: bold;">[${log.level}]</span> `;
+                if (log.source) {
+                    html += `<span style="color: #569cd6;">[${log.source}]</span> `;
+                }
+                html += `<span>${log.message}</span>`;
+                html += `</div>`;
+            }
+            
+            container.innerHTML = html;
+            
+            // 自动滚动到底部
+            if (document.getElementById('auto-scroll-checkbox').checked) {
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+        
+        /**
+         * 过滤日志
+         */
+        function filterLogs() {
+            renderLogs();
+        }
+        
+        // ============================================
+        // 工具使用统计
+        // ============================================
+        
+        let toolUsageChart = null;
+        
+        /**
+         * 加载工具使用统计
+         */
+        async function loadToolUsage() {
+            try {
+                const response = await fetch('/api/monitoring/tools/usage');
+                const data = await response.json();
+                
+                if (!toolUsageChart) {
+                    toolUsageChart = echarts.init(document.getElementById('tool-usage-chart'));
+                }
+                
+                // 准备数据
+                const toolNames = data.tools.map(t => t.tool_name);
+                const usageCounts = data.tools.map(t => t.usage_count);
+                
+                // 配置图表
+                const option = {
+                    title: {
+                        text: `总调用次数: ${data.summary.total_calls}`,
+                        left: 'center',
+                        textStyle: {
+                            fontSize: 14,
+                            color: '#666'
+                        }
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'shadow'
+                        },
+                        formatter: function(params) {
+                            const item = params[0];
+                            const tool = data.tools[item.dataIndex];
+                            let html = `<strong>${tool.tool_name}</strong><br/>`;
+                            html += `调用次数: ${tool.usage_count}<br/>`;
+                            if (tool.last_used) {
+                                html += `最后使用: ${toBeijingTime(tool.last_used)}`;
+                            }
+                            return html;
+                        }
+                    },
+                    grid: {
+                        left: '3%',
+                        right: '4%',
+                        bottom: '3%',
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: toolNames,
+                        axisLabel: {
+                            rotate: 45,
+                            fontSize: 10
+                        }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: '调用次数'
+                    },
+                    series: [
+                        {
+                            name: '调用次数',
+                            type: 'bar',
+                            data: usageCounts,
+                            itemStyle: {
+                                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                    { offset: 0, color: '#667eea' },
+                                    { offset: 1, color: '#764ba2' }
+                                ])
+                            },
+                            emphasis: {
+                                itemStyle: {
+                                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                        { offset: 0, color: '#764ba2' },
+                                        { offset: 1, color: '#667eea' }
+                                    ])
+                                }
+                            }
+                        }
+                    ]
+                };
+                
+                toolUsageChart.setOption(option);
+                
+            } catch (error) {
+                console.error('加载工具统计失败:', error);
+            }
+        }
+        
+        // ============================================
+        // Fleet记忆统计
+        // ============================================
+        
+        /**
+         * 加载Fleet记忆统计
+         */
+        async function loadFleetStats() {
+            try {
+                const response = await fetch('/api/monitoring/fleet/stats');
+                const data = await response.json();
+                
+                const container = document.getElementById('fleet-stats-content');
+                
+                let html = '<div style="font-size: 14px;">';
+                html += `<div class="perf-metric">`;
+                html += `<span class="perf-label">总记忆数</span>`;
+                html += `<span class="perf-value">${data.total_memories || 0}</span>`;
+                html += `</div>`;
+                
+                html += `<div class="perf-metric">`;
+                html += `<span class="perf-label">已同步</span>`;
+                html += `<span class="perf-value good">${data.synced_memories || 0}</span>`;
+                html += `</div>`;
+                
+                html += `<div class="perf-metric">`;
+                html += `<span class="perf-label">未同步</span>`;
+                html += `<span class="perf-value ${data.unsynced_memories > 0 ? 'warning' : ''}">${data.unsynced_memories || 0}</span>`;
+                html += `</div>`;
+                
+                html += `<div class="perf-metric">`;
+                html += `<span class="perf-label">存储大小</span>`;
+                html += `<span class="perf-value">${data.storage_size_mb || 0} MB</span>`;
+                html += `</div>`;
+                
+                html += `<div class="perf-metric">`;
+                html += `<span class="perf-label">存储使用率</span>`;
+                const usagePercent = data.storage_usage_percent || 0;
+                const usageClass = usagePercent > 80 ? 'error' : (usagePercent > 50 ? 'warning' : 'good');
+                html += `<span class="perf-value ${usageClass}">${usagePercent}%</span>`;
+                html += `</div>`;
+                
+                html += `<div class="perf-metric">`;
+                html += `<span class="perf-label">存储限制</span>`;
+                html += `<span class="perf-value">${data.storage_limit_gb || 500} GB</span>`;
+                html += `</div>`;
+                
+                if (data.storage_is_full) {
+                    html += `<div class="note" style="background: #fee2e2; border-left-color: #ef4444; margin-top: 10px;">`;
+                    html += `⚠️ 存储已满！请同步到Fleet API后删除本地数据。`;
+                    html += `</div>`;
+                }
+                
+                html += '</div>';
+                
+                container.innerHTML = html;
+                
+            } catch (error) {
+                console.error('加载Fleet统计失败:', error);
+                document.getElementById('fleet-stats-content').innerHTML = 
+                    '<p style="color: #ef4444; text-align: center; padding: 20px;">加载失败: ' + error.message + '</p>';
+            }
+        }
+        
+        // ============================================
+        // 上下文监控
+        // ============================================
+        
+        /**
+         * 加载上下文监控
+         */
+        async function loadContextMonitor() {
+            try {
+                const response = await fetch('/api/context/threads');
+                const data = await response.json();
+                
+                const container = document.getElementById('context-monitor-content');
+                
+                if (!data.threads || data.threads.length === 0) {
+                    container.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">暂无活跃线程</p>';
+                    return;
+                }
+                
+                let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px;">';
+                
+                for (const thread of data.threads) {
+                    const stats = thread.stats;
+                    const statusClass = stats.status === 'critical' ? 'error' : (stats.status === 'warning' ? 'warning' : 'good');
+                    
+                    html += '<div style="background: #f9fafb; padding: 15px; border-radius: 8px; border-left: 4px solid ';
+                    html += (stats.status === 'critical' ? '#ef4444' : (stats.status === 'warning' ? '#f59e0b' : '#10b981'));
+                    html += ';">';
+                    
+                    html += `<div style="font-weight: 600; margin-bottom: 10px;">线程ID: ${thread.thread_id}</div>`;
+                    
+                    html += `<div class="perf-metric" style="padding: 5px 0;">`;
+                    html += `<span class="perf-label">当前Token</span>`;
+                    html += `<span class="perf-value ${statusClass}">${stats.current_tokens.toLocaleString()}</span>`;
+                    html += `</div>`;
+                    
+                    html += `<div class="perf-metric" style="padding: 5px 0;">`;
+                    html += `<span class="perf-label">使用率</span>`;
+                    html += `<span class="perf-value ${statusClass}">${stats.usage_percent.toFixed(1)}%</span>`;
+                    html += `</div>`;
+                    
+                    html += `<div class="perf-metric" style="padding: 5px 0;">`;
+                    html += `<span class="perf-label">消息数</span>`;
+                    html += `<span class="perf-value">${stats.message_count}</span>`;
+                    html += `</div>`;
+                    
+                    html += `<div class="perf-metric" style="padding: 5px 0;">`;
+                    html += `<span class="perf-label">状态</span>`;
+                    html += `<span class="perf-value ${statusClass}">${stats.status.toUpperCase()}</span>`;
+                    html += `</div>`;
+                    
+                    if (stats.compressed_times > 0) {
+                        html += `<div style="font-size: 12px; color: #888; margin-top: 5px;">`;
+                        html += `🗃️ 已压缩 ${stats.compressed_times} 次`;
+                        html += `</div>`;
+                    }
+                    
+                    html += '</div>';
+                }
+                
+                html += '</div>';
+                
+                container.innerHTML = html;
+                
+            } catch (error) {
+                console.error('加载上下文监控失败:', error);
+                document.getElementById('context-monitor-content').innerHTML = 
+                    '<p style="color: #ef4444; text-align: center; padding: 20px;">加载失败: ' + error.message + '</p>';
+            }
+        }
+        
+        /**
+         * 压缩上下文
+         */
+        async function compressContext() {
+            const threadId = prompt('请输入要压缩的线程ID（留空使用默认线程）:');
+            
+            try {
+                const response = await fetch('/api/context/compress', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        thread_id: threadId || 'default',
+                        keep_recent: 10
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(`压缩成功！\n压缩前: ${data.before_tokens} tokens\n压缩后: ${data.after_tokens} tokens\n节省: ${data.saved_tokens} tokens`);
+                    await loadContextMonitor();
+                } else {
+                    const error = await response.json();
+                    alert('压缩失败: ' + (error.detail || error.message || '未知错误'));
+                }
+            } catch (error) {
+                alert('压缩失败: ' + error.message);
+            }
+        }
+        
+        /**
+         * 重置上下文
+         */
+        async function resetContext() {
+            const threadId = prompt('请输入要重置的线程ID（留空使用默认线程）:');
+            
+            if (!confirm('确定要重置该线程的上下文吗？此操作将清空所有历史消息！')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/context/reset', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        thread_id: threadId || 'default',
+                        keep_system_message: true
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('重置成功！');
+                    await loadContextMonitor();
+                } else {
+                    const error = await response.json();
+                    alert('重置失败: ' + (error.detail || error.message || '未知错误'));
+                }
+            } catch (error) {
+                alert('重置失败: ' + error.message);
+            }
+        }
+        
+        /**
+         * 页面加载完成后初始化
+         */
+        window.onload = async function() {
+            console.log('M3 Agent Dashboard v6.0 - 初始化中...');
+            
+            // 首次加载所有数据
+            await loadAllData();
+            await loadMetaPrompts();
+            await loadToolUsage();
+            await loadFleetStats();
+            await loadContextMonitor();
+            
+            // 每30秒自动刷新
+            setInterval(loadAllData, 30000);
+            
+            console.log('M3 Agent Dashboard v6.0 - 初始化完成');
+        };
+    </script>
+</body>
+</html>
