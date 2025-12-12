@@ -31,8 +31,7 @@ async def lifespan(app: FastAPI):
     print(f"   端口: {API_PORT}")
     print("=" * 60)
     
-    # Phase 2: 加载工具池和LangGraph
-    from app.tools import load_all_tools
+    # Phase 2: 初始化LLM和LangGraph(工具池将在5分钟后加载)
     from app.workflow import create_app_graph
     from langchain_openai import ChatOpenAI
     
@@ -44,18 +43,10 @@ async def lifespan(app: FastAPI):
         api_key="not-needed"
     )
     
-    # 加载工具池
-    tools, tool_errors = load_all_tools()
-    state_manager.loaded_tools = {tool.name: tool for tool in tools}
-    state_manager.tool_errors = tool_errors
-    state_manager.mark_tool_pool_loaded({tool.name: tool for tool in tools})
+    # 暂不加载工具,等待定时任务在5分钟后加载
+    print("⚠️  工具池将在5分钟后加载...")
     
-    # 绑定工具到LLM
-    llm_with_tools = llm.bind_tools(tools)
-    state_manager.app_state["llm_with_tools"] = llm_with_tools
-    state_manager.app_state["tools"] = tools
-    
-    # 创建并编译LangGraph工作流
+    # 创建并编译LangGraph工作流(使用空工具列表)
     app_graph = create_app_graph()
     state_manager.set_app_graph(app_graph)
     

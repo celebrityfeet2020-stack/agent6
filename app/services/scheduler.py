@@ -84,17 +84,34 @@ class TaskScheduler:
             print("🛑 TaskScheduler已停止")
     
     async def _preload_tool_pool(self):
-        """预加载工具池"""
-        print("🔧 开始预加载工具池...")
+        """预加载工具池(容器启动后5分钟执行)"""
+        print("🔧 开始加载15个工具到内存...")
         try:
-            # 工具池已经在启动时加载,这里只是标记
-            if state_manager.tool_pool_loaded:
-                print("✅ 工具池已预加载")
-            else:
-                print("⚠️  工具池未加载,尝试重新加载...")
-                # TODO: 实现工具池重新加载逻辑
+            from app.tools import load_all_tools
+            from langchain_openai import ChatOpenAI
+            
+            # 加载工具池
+            tools, tool_errors = load_all_tools()
+            state_manager.loaded_tools = {tool.name: tool for tool in tools}
+            state_manager.tool_errors = tool_errors
+            state_manager.mark_tool_pool_loaded({tool.name: tool for tool in tools})
+            
+            # 重新绑定工具到LLM
+            llm = ChatOpenAI(
+                base_url="http://localhost:8000/v1",
+                model="local-model",
+                temperature=0.7,
+                api_key="not-needed"
+            )
+            llm_with_tools = llm.bind_tools(tools)
+            state_manager.app_state["llm_with_tools"] = llm_with_tools
+            state_manager.app_state["tools"] = tools
+            
+            print(f"✅ 工具池加载完成: {len(tools)}/15 个工具")
+            if tool_errors:
+                print(f"⚠️  {len(tool_errors)} 个工具加载失败")
         except Exception as e:
-            print(f"❌ 工具池预加载失败: {e}")
+            print(f"❌ 工具池加载失败: {e}")
     
     async def _check_tool_pool_health(self):
         """检查工具池健康状态"""
