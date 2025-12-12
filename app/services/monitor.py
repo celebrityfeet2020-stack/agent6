@@ -5,7 +5,7 @@
 import httpx
 import asyncio
 from datetime import datetime
-from app.config import MODEL_PORT, MODEL_STATUS_CHECK_INTERVAL
+from app.config import MODEL_STATUS_CHECK_INTERVAL
 from app.state import state_manager
 
 
@@ -53,7 +53,7 @@ class SystemMonitor:
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 # 获取当前加载的模型
-                response = await client.get(f"http://localhost:{MODEL_PORT}/v1/models")
+                response = await client.get(f"http://{state_manager.config.MODEL_HOST}:{state_manager.config.MODEL_PORT}/v1/models")
                 
                 if response.status_code == 200:
                     data = response.json()
@@ -82,7 +82,7 @@ class SystemMonitor:
                     print(f"⚠️  模型API返回错误: {response.status_code}")
                     
         except Exception as e:
-            print(f"❌ 无法连接到模型服务(端口{MODEL_PORT}): {e}")
+            print(f"❌ 无法连接到模型服务({state_manager.config.MODEL_HOST}:{state_manager.config.MODEL_PORT}): {e}")
             state_manager.update_model_status(
                 model_name="连接失败",
                 status={

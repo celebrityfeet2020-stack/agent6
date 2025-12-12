@@ -98,7 +98,7 @@ class TaskScheduler:
             
             # 重新绑定工具到LLM
             llm = ChatOpenAI(
-                base_url="http://localhost:8000/v1",
+                base_url=f"http://{state_manager.config.MODEL_HOST}:{state_manager.config.MODEL_PORT}/v1",
                 model="local-model",
                 temperature=0.7,
                 api_key="not-needed"
@@ -133,7 +133,8 @@ class TaskScheduler:
         """预加载浏览器池"""
         print("🔧 开始预加载浏览器池...")
         try:
-            # TODO: 实现浏览器池预加载逻辑
+            # 浏览器池预加载已禁用,等待后续实现
+            print("⚠️  浏览器池预加载已禁用")
             state_manager.mark_browser_pool_loaded({"status": "loaded"})
             print("✅ 浏览器池预加载完成")
         except Exception as e:

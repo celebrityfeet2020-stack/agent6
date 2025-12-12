@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI):
     
     # 初始化LLM
     llm = ChatOpenAI(
-        base_url="http://localhost:8000/v1",
+        base_url=f"http://{state_manager.config.MODEL_HOST}:{state_manager.config.MODEL_PORT}/v1",
         model="local-model",
         temperature=0.7,
         api_key="not-needed"

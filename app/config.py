@@ -24,7 +24,8 @@ LOGS_DIR.mkdir(exist_ok=True)
 # ==================== 端口配置 ====================
 API_PORT = 8888  # 主API端口
 DASHBOARD_PORT = 8889  # 管理面板端口(将合并到8888)
-MODEL_PORT = 8000  # LM Studio模型端口
+MODEL_HOST = os.getenv("MODEL_HOST", "localhost")  # 模型服务主机
+MODEL_PORT = int(os.getenv("MODEL_PORT", "8000"))  # 模型服务端口
 
 # ==================== 上下文管理配置 ====================
 # 可配置的上下文长度参数

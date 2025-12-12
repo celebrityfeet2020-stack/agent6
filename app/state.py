@@ -5,6 +5,7 @@ Agent6 全局状态管理器 (单例模式)
 import threading
 from datetime import datetime
 from typing import Optional, Dict, Any
+import app.config as config
 from app.config import TIMEZONE
 
 class StateManager:
@@ -26,6 +27,9 @@ class StateManager:
         """初始化状态管理器"""
         if self._initialized:
             return
+        
+        # 配置引用(方便其他模块访问)
+        self.config = config
         
         # 系统状态
         self.system_start_time = datetime.now()
