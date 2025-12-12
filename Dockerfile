@@ -16,6 +16,12 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
 
+# 预下载AI模型(避免每次部署都下载)
+RUN echo "🔧 预下载EasyOCR模型..." && \
+    python3 -c "import easyocr; reader = easyocr.Reader(['en', 'ch_sim']); print('✅ EasyOCR模型下载完成')" && \
+    echo "🔧 预下载Whisper模型..." && \
+    python3 -c "import whisper; model = whisper.load_model('small'); print('✅ Whisper模型下载完成')"
+
 # 复制整个项目
 COPY . .
 
