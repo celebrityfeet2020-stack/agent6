@@ -3,7 +3,7 @@
 负责工具池预加载、性能检测等定时任务
 """
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
@@ -37,7 +37,7 @@ class TaskScheduler:
         self.scheduler.add_job(
             self._preload_tool_pool,
             trigger='date',
-            run_date=datetime.now().timestamp() + TOOL_POOL_PRELOAD_DELAY,
+            run_date=datetime.now() + timedelta(seconds=TOOL_POOL_PRELOAD_DELAY),
             id='tool_pool_preload'
         )
         
@@ -52,7 +52,7 @@ class TaskScheduler:
         self.scheduler.add_job(
             self._preload_browser_pool,
             trigger='date',
-            run_date=datetime.now().timestamp() + BROWSER_POOL_PRELOAD_DELAY,
+            run_date=datetime.now() + timedelta(seconds=BROWSER_POOL_PRELOAD_DELAY),
             id='browser_pool_preload'
         )
         
@@ -60,7 +60,7 @@ class TaskScheduler:
         self.scheduler.add_job(
             self._performance_check,
             trigger='date',
-            run_date=datetime.now().timestamp() + PERFORMANCE_CHECK_DELAY,
+            run_date=datetime.now() + timedelta(seconds=PERFORMANCE_CHECK_DELAY),
             id='performance_check_initial'
         )
         
