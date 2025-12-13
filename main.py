@@ -182,7 +182,7 @@ async def dashboard():
 @app.get("/chatroom", response_class=HTMLResponse)
 async def chatroom():
     """聊天室 - 返回React应用的index.html"""
-    chatroom_html_path = "chatroom_ui/index.html"
+    chatroom_html_path = "chatroom_ui/dist/index.html"
     if os.path.exists(chatroom_html_path):
         with open(chatroom_html_path, "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())

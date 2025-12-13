@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M3 Agent 管理面板 v6.0</title>
+    <title>Agent6 管理面板</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #1a1a1a; color: #e5e5e5; }
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
         .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 20px; }
         .header h1 { font-size: 32px; margin-bottom: 10px; }
@@ -17,16 +17,16 @@
         .grid-3x3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px; }
         .grid-full { display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 20px; }
         
-        .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .card h2 { font-size: 18px; margin-bottom: 15px; color: #333; }
+        .card { background: #2a2a2a; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .card h2 { font-size: 18px; margin-bottom: 15px; color: #e5e5e5; }
         .status { display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 14px; font-weight: 500; }
         .status.running { background: #10b981; color: white; }
         .status.healthy { background: #10b981; color: white; }
         .status.degraded { background: #f59e0b; color: white; }
         .status.error { background: #ef4444; color: white; }
-        .model-info { background: #f9fafb; padding: 15px; border-radius: 8px; margin: 10px 0; }
-        .model-info p { margin: 5px 0; color: #666; font-size: 14px; }
-        .model-info strong { color: #333; }
+        .model-info { background: #1f1f1f; padding: 15px; border-radius: 8px; margin: 10px 0; }
+        .model-info p { margin: 5px 0; color: #999; font-size: 14px; }
+        .model-info strong { color: #e5e5e5; }
         .badge { display: inline-block; padding: 3px 10px; background: #3b82f6; color: white; border-radius: 12px; font-size: 12px; margin-left: 10px; }
         button { background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; margin: 5px; }
         button:hover { background: #5568d3; }
@@ -36,17 +36,17 @@
         button.success:hover { background: #059669; }
         button.small { padding: 5px 12px; font-size: 12px; }
         .tools-list { list-style: none; }
-        .tools-list li { padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+        .tools-list li { padding: 8px 0; border-bottom: 1px solid #3a3a3a; }
         .tools-list li:last-child { border-bottom: none; }
         .note { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 15px 0; border-radius: 4px; font-size: 14px; }
         .note.success { background: #d1fae5; border-left-color: #10b981; }
         .note.info { background: #dbeafe; border-left-color: #3b82f6; }
         
         /* 性能指标样式 */
-        .perf-metric { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
+        .perf-metric { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #3a3a3a; }
         .perf-metric:last-child { border-bottom: none; }
-        .perf-label { color: #666; font-size: 14px; }
-        .perf-value { color: #333; font-size: 16px; font-weight: 600; }
+        .perf-label { color: #999; font-size: 14px; }
+        .perf-value { color: #e5e5e5; font-size: 16px; font-weight: 600; }
         .perf-value.good { color: #10b981; }
         .perf-value.warning { color: #f59e0b; }
         .perf-value.error { color: #ef4444; }
@@ -55,7 +55,7 @@
         /* 大数字卡片 */
         .big-number { text-align: center; padding: 20px; }
         .big-number .number { font-size: 48px; font-weight: 700; color: #667eea; margin: 10px 0; }
-        .big-number .label { font-size: 14px; color: #666; }
+        .big-number .label { font-size: 14px; color: #999; }
         .big-number .sublabel { font-size: 12px; color: #999; margin-top: 5px; }
         
         /* 响应式布局 */
@@ -67,19 +67,19 @@
         }
         
         /* 元提示词样式 */
-        .prompt-item { background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #e5e7eb; }
-        .prompt-item.active { border-left-color: #10b981; background: #d1fae5; }
-        .prompt-item h3 { font-size: 16px; margin-bottom: 8px; color: #333; }
+        .prompt-item { background: #2a2a2a; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #3a3a3a; }
+        .prompt-item.active { border-left-color: #10b981; background: #1f3a2f; }
+        .prompt-item h3 { font-size: 16px; margin-bottom: 8px; color: #e5e5e5; }
         .prompt-item .prompt-meta { font-size: 12px; color: #999; margin-bottom: 8px; }
-        .prompt-item .prompt-content { font-size: 14px; color: #666; margin-bottom: 10px; white-space: pre-wrap; max-height: 100px; overflow-y: auto; background: white; padding: 10px; border-radius: 4px; }
+        .prompt-item .prompt-content { font-size: 14px; color: #999; margin-bottom: 10px; white-space: pre-wrap; max-height: 100px; overflow-y: auto; background: #1f1f1f; padding: 10px; border-radius: 4px; }
         .prompt-item .prompt-actions { display: flex; gap: 5px; }
         
         /* 模态框样式 */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
-        .modal-content { background: white; margin: 50px auto; padding: 30px; border-radius: 10px; max-width: 600px; max-height: 80vh; overflow-y: auto; }
+        .modal-content { background: #2a2a2a; margin: 50px auto; padding: 30px; border-radius: 10px; max-width: 600px; max-height: 80vh; overflow-y: auto; }
         .modal-content h2 { margin-bottom: 20px; }
-        .modal-content label { display: block; margin-top: 15px; margin-bottom: 5px; font-weight: 600; color: #333; }
-        .modal-content input, .modal-content textarea { width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-family: inherit; }
+        .modal-content label { display: block; margin-top: 15px; margin-bottom: 5px; font-weight: 600; color: #e5e5e5; }
+        .modal-content input, .modal-content textarea { width: 100%; padding: 10px; border: 1px solid #3a3a3a; border-radius: 6px; font-size: 14px; font-family: inherit; background: #1f1f1f; color: #e5e5e5; }
         .modal-content textarea { min-height: 150px; resize: vertical; }
         .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
     </style>
@@ -87,13 +87,11 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚀 M3 Agent 管理面板 v6.0</h1>
+            <h1>🚀 Agent6</h1>
             <p>智能延迟预加载 | 定时健康检测 | 性能监控 | 实时状态汇报</p>
         </div>
 
-        <div class="note success">
-            ✅ <strong>v6.0 新特性：</strong>启动后15分钟预加载内存 | 每30分钟健康检测 | 每30分钟性能测试(错开15分钟) | 自动恢复机制 | 完整Dashboard API
-        </div>
+
 
         <!-- 第一行：系统状态概览 (3个卡片) -->
         <div class="grid-3x3">
@@ -308,7 +306,31 @@
             </div>
         </div>
 
-        <!-- 第七行：实时日志流 -->
+        <!-- 第七行：可用工具列表 -->
+        <div class="grid-full">
+            <div class="card">
+                <h2>🛠️ 可用工具 (<span id="tools-count-display">--</span>个)</h2>
+                <ul class="tools-list">
+                    <li>✅ <strong>Web Search</strong> - 网页搜索 (DuckDuckGo)</li>
+                    <li>✅ <strong>Web Scraper</strong> - 网页抓取 (BeautifulSoup4)</li>
+                    <li>✅ <strong>Browser Automation</strong> - 浏览器自动化 (Playwright)</li>
+                    <li>✅ <strong>Code Executor</strong> - 代码执行 (Docker沙盒)</li>
+                    <li>✅ <strong>File Operations</strong> - 文件操作</li>
+                    <li>✅ <strong>Image OCR</strong> - 图像文字识别 (EasyOCR + Tesseract)</li>
+                    <li>✅ <strong>Image Analysis</strong> - 图像分析</li>
+                    <li>✅ <strong>Data Analysis</strong> - 数据分析 (Pandas + Matplotlib)</li>
+                    <li>✅ <strong>SSH Tool</strong> - SSH 远程执行</li>
+                    <li>✅ <strong>Git Tool</strong> - Git 仓库管理</li>
+                    <li>✅ <strong>Universal API</strong> - 通用 API 调用</li>
+                    <li>✅ <strong>Telegram Tool</strong> - Telegram 机器人</li>
+                    <li>✅ <strong>Speech Recognition</strong> - 语音识别 (Whisper)</li>
+                    <li>✅ <strong>RPA Tool</strong> - RPA自动化</li>
+                    <li>✅ <strong>File Sync</strong> - 文件同步</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 第八行：实时日志流 -->
         <div class="grid-full">
             <div class="card">
                 <h2>📜 实时日志流 <span class="badge" id="log-status-badge" style="background: #999;">未连接</span></h2>
@@ -330,32 +352,8 @@
                     </label>
                 </div>
                 <div id="log-container" style="background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 12px; max-height: 400px; overflow-y: auto; line-height: 1.6;">
-                    <div style="color: #888;">点击“连接”按钮开始接收实时日志...</div>
+                    <div style="color: #888;">点击"连接"按钮开始接收实时日志...</div>
                 </div>
-            </div>
-        </div>
-
-        <!-- 第八行：可用工具列表 -->
-        <div class="grid-full">
-            <div class="card">
-                <h2>🛠️ 可用工具 (<span id="tools-count-display">15</span>个)</h2>
-                <ul class="tools-list">
-                    <li>✅ <strong>Web Search</strong> - 网页搜索 (DuckDuckGo)</li>
-                    <li>✅ <strong>Web Scraper</strong> - 网页抓取 (BeautifulSoup4)</li>
-                    <li>✅ <strong>Browser Automation</strong> - 浏览器自动化 (Playwright)</li>
-                    <li>✅ <strong>Code Executor</strong> - 代码执行 (Docker沙盒)</li>
-                    <li>✅ <strong>File Operations</strong> - 文件操作</li>
-                    <li>✅ <strong>Image OCR</strong> - 图像文字识别 (EasyOCR + Tesseract)</li>
-                    <li>✅ <strong>Image Analysis</strong> - 图像分析</li>
-                    <li>✅ <strong>Data Analysis</strong> - 数据分析 (Pandas + Matplotlib)</li>
-                    <li>✅ <strong>SSH Tool</strong> - SSH 远程执行</li>
-                    <li>✅ <strong>Git Tool</strong> - Git 仓库管理</li>
-                    <li>✅ <strong>Universal API</strong> - 通用 API 调用</li>
-                    <li>✅ <strong>Telegram Tool</strong> - Telegram 机器人</li>
-                    <li>✅ <strong>Speech Recognition</strong> - 语音识别 (Whisper)</li>
-                    <li>✅ <strong>RPA Tool</strong> - RPA自动化</li>
-                    <li>✅ <strong>File Sync</strong> - 文件同步</li>
-                </ul>
             </div>
         </div>
     </div>
@@ -454,7 +452,7 @@
          */
         async function loadSystemStatus() {
             try {
-                const response = await fetch('/api/dashboard/status');
+                const response = await fetch('/api/dashboard/system_status');
                 const data = await response.json();
                 
                 // 更新运行时间
@@ -502,19 +500,21 @@
          */
         async function loadPreloadStatus() {
             try {
-                const response = await fetch('/api/dashboard/preload-status');
+                const response = await fetch('/api/dashboard/tool_pool_status');
                 const data = await response.json();
                 
                 const icon = document.getElementById('preload-status-icon');
                 const time = document.getElementById('preload-time');
                 
-                if (data.completed) {
+                // 后端返回 loaded 而不是 completed
+                if (data.loaded) {
                     icon.textContent = '✅';
-                    time.textContent = `完成于: ${toBeijingTime(data.preload_time)}`;
+                    // 后端返回 load_time 而不是 preload_time
+                    time.textContent = `完成于: ${toBeijingTime(data.load_time)}`;
                     time.style.color = '#10b981';
                 } else {
                     icon.textContent = '⏳';
-                    time.textContent = '等待中... (T+15分钟)';
+                    time.textContent = '等待中... (T+5分钟)';
                     time.style.color = '#f59e0b';
                 }
                 
@@ -528,13 +528,10 @@
          */
         async function loadHealthStatus() {
             try {
-                const response = await fetch('/api/dashboard/health');
+                const response = await fetch('/api/monitoring/system/health');
                 const result = await response.json();
                 
-                if (result.status === 'pending') {
-                    return; // 还未执行首次检测
-                }
-                
+                // 后端总是返回 data 字段
                 const data = result.data;
                 
                 // 更新工具状态
@@ -564,14 +561,26 @@
          */
         async function loadPerformanceData() {
             try {
-                const response = await fetch('/api/dashboard/performance');
+                const response = await fetch('/api/dashboard/performance_data');
                 const result = await response.json();
                 
-                if (result.status === 'pending') {
-                    return; // 还未执行首次测试
-                }
-                
+                // 后端返回 { data: {...}, last_check: "..." }
                 const data = result.data;
+                const lastCheck = result.last_check;
+                
+                // 如果没有数据，显示默认值
+                if (!data || Object.keys(data).length === 0) {
+                    document.getElementById('tokens-per-second').textContent = '--';
+                    document.getElementById('ttft').textContent = '-- ms';
+                    document.getElementById('total-latency').textContent = '-- ms';
+                    document.getElementById('model-perf-updated').textContent = `更新时间: ${lastCheck}`;
+                    
+                    document.getElementById('memory-rss').textContent = '-- MB';
+                    document.getElementById('memory-vms').textContent = '-- MB';
+                    document.getElementById('memory-percent').textContent = '--%';
+                    document.getElementById('memory-updated').textContent = `更新时间: ${lastCheck}`;
+                    return;
+                }
                 
                 // 更新模型性能
                 if (data.model_performance) {
@@ -579,7 +588,7 @@
                     document.getElementById('tokens-per-second').textContent = mp.tokens_per_second || '--';
                     document.getElementById('ttft').textContent = mp.ttft_ms ? `${mp.ttft_ms} ms` : '-- ms';
                     document.getElementById('total-latency').textContent = mp.total_latency_ms ? `${mp.total_latency_ms} ms` : '-- ms';
-                    document.getElementById('model-perf-updated').textContent = `更新时间: ${toBeijingTime(data.timestamp)}`;
+                    document.getElementById('model-perf-updated').textContent = `更新时间: ${toBeijingTime(lastCheck)}`;
                 }
                 
                 // 更新内存状态
@@ -588,7 +597,7 @@
                     document.getElementById('memory-rss').textContent = mem.rss_mb ? `${mem.rss_mb} MB` : '-- MB';
                     document.getElementById('memory-vms').textContent = mem.vms_mb ? `${mem.vms_mb} MB` : '-- MB';
                     document.getElementById('memory-percent').textContent = mem.percent ? `${mem.percent}%` : '--%';
-                    document.getElementById('memory-updated').textContent = `更新时间: ${toBeijingTime(data.timestamp)}`;
+                    document.getElementById('memory-updated').textContent = `更新时间: ${toBeijingTime(lastCheck)}`;
                 }
                 
             } catch (error) {
@@ -601,7 +610,7 @@
          */
         async function loadLLMStatus() {
             try {
-                const response = await fetch('/api/status');
+                const response = await fetch('/api/dashboard/system_status');
                 const data = await response.json();
                 
                 // 更新 LLM 后端状态

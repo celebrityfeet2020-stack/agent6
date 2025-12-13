@@ -246,7 +246,9 @@ async def get_system_health():
     except Exception:
         cpu_percent = None
     
+    # 构建完整的数据结构(兼容前端期望)
     return {
+        # 基础状态(兼容旧版本)
         "status": "healthy",
         "uptime": uptime_str,
         "uptime_seconds": int(uptime.total_seconds()),
@@ -270,7 +272,23 @@ async def get_system_health():
             "memory": memory_info,
             "cpu_percent": cpu_percent
         },
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
+        
+        # 前端期望的数据结构
+        "data": {
+            "tools": {
+                "count": len(state_manager.loaded_tools),
+                "status": "available" if state_manager.tool_pool_loaded else "unavailable"
+            },
+            "apis": {
+                "fleet": "available",  # Fleet API总是可用的
+                "langgraph": "available" if state_manager.app_graph is not None else "unavailable",
+                "llm": {
+                    "status": "connected" if state_manager.current_model else "disconnected",
+                    "model": state_manager.current_model or "未知"
+                }
+            }
+        }
     }
 
 

@@ -25,7 +25,7 @@ class ChatRequest(BaseModel):
     metadata: Optional[Dict[str, Any]] = Field(default=None, description="元数据")
 
 
-@router.post("/api/multidimensional/chat/stream")
+@router.post("/api/multidimensional/chat/stream/sse")
 async def multidimensional_chat_stream(request: ChatRequest):
     """
     多维聊天室 - SSE流式API

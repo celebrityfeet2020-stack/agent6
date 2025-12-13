@@ -336,7 +336,7 @@
         <!-- 第八行：可用工具列表 -->
         <div class="grid-full">
             <div class="card">
-                <h2>🛠️ 可用工具 (<span id="tools-count-display">15</span>个)</h2>
+                <h2>🛠️ 可用工具 (<span id="tools-count-display">--</span>个)</h2>
                 <ul class="tools-list">
                     <li>✅ <strong>Web Search</strong> - 网页搜索 (DuckDuckGo)</li>
                     <li>✅ <strong>Web Scraper</strong> - 网页抓取 (BeautifulSoup4)</li>
@@ -500,19 +500,21 @@
          */
         async function loadPreloadStatus() {
             try {
-                const response = await fetch('/api/dashboard/preload-status');
+                const response = await fetch('/api/dashboard/tool_pool_status');
                 const data = await response.json();
                 
                 const icon = document.getElementById('preload-status-icon');
                 const time = document.getElementById('preload-time');
                 
-                if (data.completed) {
+                // 后端返回 loaded 而不是 completed
+                if (data.loaded) {
                     icon.textContent = '✅';
-                    time.textContent = `完成于: ${toBeijingTime(data.preload_time)}`;
+                    // 后端返回 load_time 而不是 preload_time
+                    time.textContent = `完成于: ${toBeijingTime(data.load_time)}`;
                     time.style.color = '#10b981';
                 } else {
                     icon.textContent = '⏳';
-                    time.textContent = '等待中... (T+15分钟)';
+                    time.textContent = '等待中... (T+5分钟)';
                     time.style.color = '#f59e0b';
                 }
                 
@@ -526,13 +528,10 @@
          */
         async function loadHealthStatus() {
             try {
-                const response = await fetch('/api/dashboard/health');
+                const response = await fetch('/api/monitoring/system/health');
                 const result = await response.json();
                 
-                if (result.status === 'pending') {
-                    return; // 还未执行首次检测
-                }
-                
+                // 后端总是返回 data 字段
                 const data = result.data;
                 
                 // 更新工具状态
@@ -562,14 +561,26 @@
          */
         async function loadPerformanceData() {
             try {
-                const response = await fetch('/api/dashboard/performance');
+                const response = await fetch('/api/dashboard/performance_data');
                 const result = await response.json();
                 
-                if (result.status === 'pending') {
-                    return; // 还未执行首次测试
-                }
-                
+                // 后端返回 { data: {...}, last_check: "..." }
                 const data = result.data;
+                const lastCheck = result.last_check;
+                
+                // 如果没有数据，显示默认值
+                if (!data || Object.keys(data).length === 0) {
+                    document.getElementById('tokens-per-second').textContent = '--';
+                    document.getElementById('ttft').textContent = '-- ms';
+                    document.getElementById('total-latency').textContent = '-- ms';
+                    document.getElementById('model-perf-updated').textContent = `更新时间: ${lastCheck}`;
+                    
+                    document.getElementById('memory-rss').textContent = '-- MB';
+                    document.getElementById('memory-vms').textContent = '-- MB';
+                    document.getElementById('memory-percent').textContent = '--%';
+                    document.getElementById('memory-updated').textContent = `更新时间: ${lastCheck}`;
+                    return;
+                }
                 
                 // 更新模型性能
                 if (data.model_performance) {
@@ -577,7 +588,7 @@
                     document.getElementById('tokens-per-second').textContent = mp.tokens_per_second || '--';
                     document.getElementById('ttft').textContent = mp.ttft_ms ? `${mp.ttft_ms} ms` : '-- ms';
                     document.getElementById('total-latency').textContent = mp.total_latency_ms ? `${mp.total_latency_ms} ms` : '-- ms';
-                    document.getElementById('model-perf-updated').textContent = `更新时间: ${toBeijingTime(data.timestamp)}`;
+                    document.getElementById('model-perf-updated').textContent = `更新时间: ${toBeijingTime(lastCheck)}`;
                 }
                 
                 // 更新内存状态
@@ -586,7 +597,7 @@
                     document.getElementById('memory-rss').textContent = mem.rss_mb ? `${mem.rss_mb} MB` : '-- MB';
                     document.getElementById('memory-vms').textContent = mem.vms_mb ? `${mem.vms_mb} MB` : '-- MB';
                     document.getElementById('memory-percent').textContent = mem.percent ? `${mem.percent}%` : '--%';
-                    document.getElementById('memory-updated').textContent = `更新时间: ${toBeijingTime(data.timestamp)}`;
+                    document.getElementById('memory-updated').textContent = `更新时间: ${toBeijingTime(lastCheck)}`;
                 }
                 
             } catch (error) {
@@ -599,7 +610,7 @@
          */
         async function loadLLMStatus() {
             try {
-                const response = await fetch('/api/status');
+                const response = await fetch('/api/dashboard/system_status');
                 const data = await response.json();
                 
                 // 更新 LLM 后端状态

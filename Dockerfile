@@ -1,6 +1,6 @@
 # Agent6 Rebuilt Dockerfile
-# 基于Python 3.11的官方镜像
-FROM python:3.11-slim
+# 基于Playwright官方镜像(包含Chromium浏览器)
+FROM mcr.microsoft.com/playwright/python:v1.49.0-jammy
 
 # 设置工作目录
 WORKDIR /app
@@ -39,6 +39,10 @@ RUN mkdir -p /app/data /app/logs
 
 # 设置时区为北京时间
 ENV TZ=Asia/Shanghai
+
+# 抑制CUDA/MPS警告(容器内没有GPU)
+ENV PYTORCH_ENABLE_MPS_FALLBACK=1
+ENV CUDA_VISIBLE_DEVICES=""
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # 暴露端口
