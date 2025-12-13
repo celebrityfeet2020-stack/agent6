@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
     print("=" * 60)
     
     # Phase 2: 初始化LLM和LangGraph(工具池将在5分钟后加载)
-    from app.workflow import create_app_graph
+    from app.workflow import create_agent_graph
     from langchain_openai import ChatOpenAI
     
     # 初始化LLM
@@ -49,7 +49,7 @@ async def lifespan(app: FastAPI):
     print("⚠️  工具池将在5分钟后加载...")
     
     # 创建并编译LangGraph工作流(使用空工具列表)
-    app_graph = create_app_graph()
+    app_graph = create_agent_graph()
     state_manager.set_app_graph(app_graph)
     
     # Phase 4: 启动后台服务

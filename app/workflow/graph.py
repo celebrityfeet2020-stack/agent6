@@ -117,7 +117,7 @@ def tool_node_with_error_handling(state: MessagesState) -> MessagesState:
         return {"messages": [ToolMessage(content=error_message, tool_call_id=tool_invocations[0]["id"])]}
 
 
-def create_app_graph():
+def create_agent_graph():
     """创建并编译LangGraph工作流"""
     print("🔧 正在创建LangGraph工作流...")
     
